@@ -189,11 +189,8 @@ function PieTooltip({ active, payload }) {
 
 // ─── 메인 앱 ───────────────────────────────────────────
 export default function App() {
-  const [holdings, setHoldings] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch { return []; }
-  });
+  const [holdings, setHoldings] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [prices, setPrices] = useState({});
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -202,10 +199,34 @@ export default function App() {
   const [editVal, setEditVal] = useState({});
   const intervalRef = useRef(null);
 
-  // 로컬스토리지 저장
+  // 서버에서 데이터 불러오기
   useEffect(() => {
+    fetch('/api/holdings')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setHoldings(data);
+        setDataLoaded(true);
+      })
+      .catch(() => {
+        // 실패시 로컬스토리지 fallback
+        try {
+          const local = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (local) setHoldings(local);
+        } catch {}
+        setDataLoaded(true);
+      });
+  }, []);
+
+  // 서버에 데이터 저장
+  useEffect(() => {
+    if (!dataLoaded) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
-  }, [holdings]);
+    fetch('/api/holdings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(holdings),
+    }).catch(() => {});
+  }, [holdings, dataLoaded]);
 
   // 시세 조회
   const fetchPrices = useCallback(async () => {
