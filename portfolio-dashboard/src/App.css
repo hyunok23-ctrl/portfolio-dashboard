@@ -586,3 +586,80 @@ td.zero { color: var(--zero); }
   .summary-value { font-size: 1.1rem; }
   .logo { font-size: 0.9rem; }
 }
+
+/* ─── 모바일 최적화 ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 12px;
+    height: 56px;
+  }
+  .logo { font-size: 0.85rem; }
+  .last-updated { display: none; }
+  .header-right { gap: 8px; }
+  .btn-primary { padding: 7px 12px; font-size: 0.78rem; }
+
+  .main { padding: 12px; }
+
+  .summary-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .summary-card { padding: 14px 16px; }
+  .summary-value { font-size: 1.1rem; }
+  .summary-label { font-size: 0.68rem; }
+
+  .content-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  .table-section { padding: 16px 12px; }
+  .section-header { margin-bottom: 12px; }
+
+  /* 모바일 테이블 → 카드 형태로 변환 */
+  .stock-table thead { display: none; }
+  .stock-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 6px;
+  }
+  .stock-table tbody tr:last-child { border-bottom: none; }
+  .stock-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 0;
+    border-bottom: none;
+    font-size: 0.82rem;
+    text-align: left;
+  }
+  .stock-table td.num { text-align: left; }
+  .stock-table td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 60px;
+  }
+  .stock-table td:first-child::before { content: ''; }
+  .stock-table td:first-child {
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .stock-name { font-size: 0.9rem; }
+  .price-cell { align-items: flex-end; }
+
+  .action-btns { justify-content: flex-end; }
+
+  /* 파이차트 모바일 */
+  .chart-section { padding: 16px 12px; position: static; }
+
+  /* 모달 모바일 */
+  .modal { width: 95vw; margin: 0 auto; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; }
+  .input-row { flex-direction: column; gap: 12px; }
+}

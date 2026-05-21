@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -437,16 +437,16 @@ export default function App() {
                           </>
                         ) : (
                           <>
-                            <td className="num">{h.qty.toLocaleString()}</td>
-                            <td className="num">{fmt(h.avgPrice)}</td>
+                            <td className="num" data-label="수량">{h.qty.toLocaleString()}</td>
+                            <td className="num" data-label="평균단가">{fmt(h.avgPrice)}</td>
                           </>
                         )}
-                        <td className="num">{fmt(h.principal)}</td>
-                        <td className="num">{h.evalAmount > 0 ? fmt(h.evalAmount) : '—'}</td>
+                        <td className="num" data-label="원금">{fmt(h.principal)}</td>
+                        <td className="num" data-label="평가금액">{h.evalAmount > 0 ? fmt(h.evalAmount) : '—'}</td>
                         <td className={`num ${cls(h.profit)}`}>
                           {h.evalAmount > 0 ? (h.profit >= 0 ? '+' : '') + fmt(h.profit) : '—'}
                         </td>
-                        <td className={`num rate-cell ${cls(h.profitRate)}`}>
+                        <td className={`num rate-cell ${cls(h.profitRate)}`} data-label="수익률">
                           {h.evalAmount > 0 ? fmtRate(h.profitRate) : '—'}
                         </td>
                         <td>
@@ -531,4 +531,3 @@ export default function App() {
     </div>
   );
 }
-
