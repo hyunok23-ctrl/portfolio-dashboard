@@ -217,10 +217,11 @@ export default function App() {
       });
   }, []);
 
-  // 서버에 데이터 저장
+  // 서버에 데이터 저장 (빈 배열은 저장 안 함)
   useEffect(() => {
     if (!dataLoaded) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
+    if (holdings.length === 0) return;
     fetch('/api/holdings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
