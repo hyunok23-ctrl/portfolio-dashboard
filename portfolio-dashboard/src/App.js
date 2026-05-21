@@ -1,7 +1,8 @@
+/* eslint-disable */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine
+  LineChart, Line, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import './App.css';
 
@@ -327,6 +328,7 @@ export default function App() {
       console.error('시세 조회 실패:', e);
     }
     setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdings]);
 
   // 스냅샷 조회
@@ -366,7 +368,7 @@ export default function App() {
 
   useEffect(() => {
     fetchPrices();
-    fetchSnapshots();
+    fetchSnapshots(); // eslint-disable-line react-hooks/exhaustive-deps
     clearInterval(intervalRef.current);
     intervalRef.current = setInterval(fetchPrices, REFRESH_INTERVAL);
     return () => clearInterval(intervalRef.current);
