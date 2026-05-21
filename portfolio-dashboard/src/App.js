@@ -217,7 +217,11 @@ function HistoryChart({ snapshots, onClose }) {
                 <Tooltip
                   contentStyle={{background:'#1a2235', border:'1px solid #1f2d45', borderRadius:8}}
                   labelStyle={{color:'#7a8ba8'}}
-                  formatter={(v, n) => [fmt(v) + '원', n === 'eval' ? '평가금액' : '손익']}
+                  formatter={(v, n) => {
+                    if (n === 'eval') return [fmt(v) + '원', '평가금액'];
+                    const color = v >= 0 ? '#ff4747' : '#4fc3f7';
+                    return [<span style={{color}}>{(v >= 0 ? '+' : '') + fmt(v) + '원'}</span>, '손익'];
+                  }}
                 />
                 <Line type="monotone" dataKey="eval" stroke="#00d4aa" strokeWidth={2} dot={{r:3, fill:'#00d4aa'}} activeDot={{r:5}} name="eval" />
                 <Line type="monotone" dataKey="profit" stroke="#4fc3f7" strokeWidth={1.5} dot={{r:2, fill:'#4fc3f7'}} strokeDasharray="4 2" name="profit" />
