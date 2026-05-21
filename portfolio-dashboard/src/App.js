@@ -32,12 +32,13 @@ const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero');
 
 // ─── 컴포넌트: 종목 추가 모달 ──────────────────────────
 function AddStockModal({ onAdd, onClose }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [qty, setQty] = useState('');
   const [avgPrice, setAvgPrice] = useState('');
+  const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState(null);
   const debounceRef = useRef(null);
 
   const search = useCallback(async (q) => {
@@ -54,22 +55,29 @@ function AddStockModal({ onAdd, onClose }) {
   }, []);
 
   useEffect(() => {
+    if (selected) return;
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(query), 350);
+    debounceRef.current = setTimeout(() => search(name), 350);
     return () => clearTimeout(debounceRef.current);
-  }, [query, search]);
+  }, [name, search, selected]);
 
   const handleSubmit = () => {
-    if (!selected || !qty || !avgPrice) return;
+    const finalCode = selected ? selected.code : code.trim();
+    const finalName = selected ? selected.name : name.trim();
+    if (!finalCode || !finalName || !qty || !avgPrice) return;
     onAdd({
       id: Date.now().toString(),
-      code: selected.code,
-      name: selected.name,
+      code: finalCode,
+      name: finalName,
       qty: parseInt(qty),
       avgPrice: parseInt(avgPrice.replace(/,/g, '')),
     });
     onClose();
   };
+
+  const canSubmit = selected
+    ? (qty && avgPrice)
+    : (name.trim() && code.trim() && qty && avgPrice);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -81,12 +89,12 @@ function AddStockModal({ onAdd, onClose }) {
 
         <div className="modal-body">
           <div className="input-group">
-            <label>종목 검색</label>
+            <label>종목명 검색 (자동완성) 또는 직접 입력</label>
             <input
               autoFocus
-              placeholder="종목명 또는 코드 입력 (예: 삼성전자, KODEX 200)"
-              value={query}
-              onChange={e => { setQuery(e.target.value); setSelected(null); }}
+              placeholder="예: 삼성전자, 현대차, KODEX 200"
+              value={name}
+              onChange={e => { setName(e.target.value); setSelected(null); setCode(''); }}
             />
           </div>
 
@@ -98,7 +106,7 @@ function AddStockModal({ onAdd, onClose }) {
                 <div
                   key={r.code}
                   className="search-item"
-                  onClick={() => { setSelected(r); setQuery(r.name); setResults([]); }}
+                  onClick={() => { setSelected(r); setName(r.name); setCode(r.code); setResults([]); }}
                 >
                   <span className="search-name">{r.name}</span>
                   <span className="search-code">{r.code}</span>
@@ -107,9 +115,16 @@ function AddStockModal({ onAdd, onClose }) {
             </div>
           )}
 
-          {selected && (
-            <div className="selected-badge">
-              ✓ {selected.name} ({selected.code})
+          {selected ? (
+            <div className="selected-badge">✓ {selected.name} ({selected.code})</div>
+          ) : (
+            <div className="input-group">
+              <label>종목 코드 (검색 안 될 때 직접 입력)</label>
+              <input
+                placeholder="예: 005930 (삼성전자), 005380 (현대차)"
+                value={code}
+                onChange={e => setCode(e.target.value)}
+              />
             </div>
           )}
 
@@ -136,10 +151,10 @@ function AddStockModal({ onAdd, onClose }) {
             </div>
           </div>
 
-          {selected && qty && avgPrice && (
+          {canSubmit && (
             <div className="preview">
               <span>투자 원금</span>
-              <span className="preview-value">{fmt(parseInt(qty) * parseInt(avgPrice || 0))}원</span>
+              <span className="preview-value">{fmt(parseInt(qty || 0) * parseInt(avgPrice || 0))}원</span>
             </div>
           )}
         </div>
@@ -149,7 +164,7 @@ function AddStockModal({ onAdd, onClose }) {
           <button
             className="btn-add"
             onClick={handleSubmit}
-            disabled={!selected || !qty || !avgPrice}
+            disabled={!canSubmit}
           >
             추가
           </button>
