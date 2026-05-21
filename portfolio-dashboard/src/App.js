@@ -243,15 +243,16 @@ export default function App() {
   // 인라인 수정
   const startEdit = (h) => {
     setEditingId(h.id);
-    setEditVal({ qty: h.qty, avgPrice: h.avgPrice });
+    setEditVal({ qty: h.qty, avgPrice: h.avgPrice, code: h.code, name: h.name });
   };
   const saveEdit = (id) => {
     setHoldings(prev => prev.map(h =>
       h.id === id
-        ? { ...h, qty: parseInt(editVal.qty), avgPrice: parseInt(editVal.avgPrice) }
+        ? { ...h, qty: parseInt(editVal.qty), avgPrice: parseInt(editVal.avgPrice), code: editVal.code.trim(), name: editVal.name.trim() }
         : h
     ));
     setEditingId(null);
+    fetchPrices();
   };
 
   // 계산
@@ -367,10 +368,25 @@ export default function App() {
                         <td>
                           <div className="stock-name-cell">
                             <span className="color-dot" style={{ background: COLORS[idx % COLORS.length] }} />
-                            <div>
-                              <div className="stock-name">{h.name}</div>
-                              <div className="stock-code">{h.code}</div>
-                            </div>
+                            {editingId === h.id ? (
+                              <div style={{display:'flex', flexDirection:'column', gap:4}}>
+                                <input className="inline-input" style={{width:120, textAlign:'left'}}
+                                  placeholder="종목명"
+                                  value={editVal.name}
+                                  onChange={e => setEditVal(v => ({ ...v, name: e.target.value }))}
+                                />
+                                <input className="inline-input" style={{width:90, textAlign:'left'}}
+                                  placeholder="종목코드"
+                                  value={editVal.code}
+                                  onChange={e => setEditVal(v => ({ ...v, code: e.target.value }))}
+                                />
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="stock-name">{h.name}</div>
+                                <div className="stock-code">{h.code}</div>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="num">
