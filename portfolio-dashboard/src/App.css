@@ -663,3 +663,109 @@ td.zero { color: var(--zero); }
   .modal-footer { padding: 12px 16px; }
   .input-row { flex-direction: column; gap: 12px; }
 }
+
+/* ─── 히스토리 차트 ──────────────────────────────────── */
+.btn-secondary {
+  padding: 8px 14px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+.history-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  width: 720px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  animation: slideUp 0.2s ease;
+}
+
+.history-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.history-chart-wrap {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 16px 8px 8px;
+}
+
+.history-hint {
+  text-align: center;
+  color: var(--text3);
+  font-size: 0.8rem;
+  padding: 12px;
+}
+
+.history-detail {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.history-detail-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-date {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text2);
+}
+
+.history-summary {
+  display: flex;
+  gap: 20px;
+  font-size: 0.82rem;
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+
+.history-holdings {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-holding-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+.history-holding-row:last-child { border-bottom: none; }
+
+.history-holding-name { color: var(--text2); flex: 1; }
+.history-holding-price { font-family: 'Space Mono', monospace; color: var(--text); width: 100px; text-align: right; }
+.history-holding-rate { font-family: 'Space Mono', monospace; font-weight: 700; width: 80px; text-align: right; }
+.history-holding-rate.pos { color: var(--pos); }
+.history-holding-rate.neg { color: var(--neg); }
+.history-holding-rate.zero { color: var(--zero); }
+
+@media (max-width: 768px) {
+  .history-modal { width: 95vw; }
+  .history-body { padding: 14px; }
+  .history-summary { gap: 10px; font-size: 0.75rem; }
+}

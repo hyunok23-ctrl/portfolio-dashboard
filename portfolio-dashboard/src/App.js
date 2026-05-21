@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine
 } from 'recharts';
 import './App.css';
 
@@ -174,6 +175,86 @@ function AddStockModal({ onAdd, onClose }) {
   );
 }
 
+
+// ─── 컴포넌트: 히스토리 차트 ───────────────────────────
+function HistoryChart({ snapshots, onClose }) {
+  const [selected, setSelected] = useState(null);
+
+  const chartData = snapshots.map(s => ({
+    date: s.date,
+    label: s.date.slice(5), // MM-DD
+    eval: s.totalEval,
+    profit: s.totalProfit,
+    rate: s.totalProfitRate,
+  })).reverse();
+
+  const handleClick = (data) => {
+    if (!data?.activePayload) return;
+    const date = data.activePayload[0]?.payload?.date;
+    const snap = snapshots.find(s => s.date === date);
+    setSelected(snap || null);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="history-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span>📈 평가금액 이력</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="history-body">
+          <div className="history-chart-wrap">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={chartData} onClick={handleClick} style={{cursor:'pointer'}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2d45" />
+                <XAxis dataKey="label" tick={{fill:'#4a5d78', fontSize:11}} />
+                <YAxis
+                  tick={{fill:'#4a5d78', fontSize:11}}
+                  tickFormatter={v => (v/1000000).toFixed(0) + 'M'}
+                  width={45}
+                />
+                <Tooltip
+                  contentStyle={{background:'#1a2235', border:'1px solid #1f2d45', borderRadius:8}}
+                  labelStyle={{color:'#7a8ba8'}}
+                  formatter={(v, n) => [fmt(v) + '원', n === 'eval' ? '평가금액' : '손익']}
+                />
+                <Line type="monotone" dataKey="eval" stroke="#00d4aa" strokeWidth={2} dot={{r:3, fill:'#00d4aa'}} activeDot={{r:5}} name="eval" />
+                <Line type="monotone" dataKey="profit" stroke="#4fc3f7" strokeWidth={1.5} dot={{r:2, fill:'#4fc3f7'}} strokeDasharray="4 2" name="profit" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {selected ? (
+            <div className="history-detail">
+              <div className="history-detail-header">
+                <span className="history-date">{selected.date}</span>
+                <div className="history-summary">
+                  <span>평가금액 <b style={{color:'#00d4aa'}}>{fmt(selected.totalEval)}원</b></span>
+                  <span>손익 <b className={cls(selected.totalProfit)}>{selected.totalProfit >= 0 ? '+' : ''}{fmt(selected.totalProfit)}원</b></span>
+                  <span>수익률 <b className={cls(selected.totalProfitRate)}>{fmtRate(selected.totalProfitRate)}</b></span>
+                </div>
+              </div>
+              {selected.holdings && (
+                <div className="history-holdings">
+                  {selected.holdings.map((h, i) => (
+                    <div key={i} className="history-holding-row">
+                      <span className="history-holding-name">{h.name}</span>
+                      <span className="history-holding-price">{h.currentPrice > 0 ? fmt(h.currentPrice) : '—'}원</span>
+                      <span className={`history-holding-rate ${cls(h.profitRate)}`}>{h.evalAmount > 0 ? fmtRate(h.profitRate) : '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="history-hint">차트의 날짜를 클릭하면 상세 정보를 볼 수 있어요</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── 컴포넌트: 커스텀 파이차트 툴팁 ───────────────────
 function PieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -192,6 +273,8 @@ export default function App() {
   const [holdings, setHoldings] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [prices, setPrices] = useState({});
+  const [snapshots, setSnapshots] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -239,14 +322,51 @@ export default function App() {
       const data = await res.json();
       setPrices(data);
       setLastUpdated(new Date());
+      saveSnapshot(data, holdings);
     } catch (e) {
       console.error('시세 조회 실패:', e);
     }
     setLoading(false);
   }, [holdings]);
 
+  // 스냅샷 조회
+  const fetchSnapshots = useCallback(async () => {
+    try {
+      const res = await fetch('/api/snapshot');
+      const data = await res.json();
+      if (Array.isArray(data)) setSnapshots(data);
+    } catch (e) {}
+  }, []);
+
+  // 오늘 스냅샷 자동 저장
+  const saveSnapshot = useCallback(async (currentPrices, currentHoldings) => {
+    if (currentHoldings.length === 0) return;
+    const enriched = currentHoldings.map(h => {
+      const p = currentPrices[h.code];
+      const currentPrice = p?.price || 0;
+      const principal = h.qty * h.avgPrice;
+      const evalAmount = h.qty * currentPrice;
+      const profit = evalAmount - principal;
+      const profitRate = principal > 0 ? (profit / principal) * 100 : 0;
+      return { ...h, currentPrice, principal, evalAmount, profit, profitRate };
+    });
+    const totalPrincipal = enriched.reduce((s, h) => s + h.principal, 0);
+    const totalEval = enriched.reduce((s, h) => s + h.evalAmount, 0);
+    const totalProfit = totalEval - totalPrincipal;
+    const totalProfitRate = totalPrincipal > 0 ? (totalProfit / totalPrincipal) * 100 : 0;
+    try {
+      await fetch('/api/snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalPrincipal, totalEval, totalProfit, totalProfitRate, holdings: enriched }),
+      });
+      fetchSnapshots();
+    } catch (e) {}
+  }, [fetchSnapshots]);
+
   useEffect(() => {
     fetchPrices();
+    fetchSnapshots();
     clearInterval(intervalRef.current);
     intervalRef.current = setInterval(fetchPrices, REFRESH_INTERVAL);
     return () => clearInterval(intervalRef.current);
@@ -323,6 +443,9 @@ export default function App() {
           <button className={`btn-refresh ${loading ? 'spinning' : ''}`} onClick={fetchPrices} disabled={loading}>
             ↻
           </button>
+          <button className="btn-secondary" onClick={() => setShowHistory(true)}>
+            📈 이력
+          </button>
           <button className="btn-primary" onClick={() => setShowModal(true)}>
             + 종목 추가
           </button>
@@ -366,7 +489,10 @@ export default function App() {
                 <div className="empty-icon">📊</div>
                 <div className="empty-text">아직 종목이 없어요</div>
                 <div className="empty-sub">위의 '종목 추가' 버튼으로 시작해보세요</div>
-                <button className="btn-primary" onClick={() => setShowModal(true)}>+ 첫 종목 추가</button>
+                <button className="btn-secondary" onClick={() => setShowHistory(true)}>
+            📈 이력
+          </button>
+          <button className="btn-primary" onClick={() => setShowModal(true)}>+ 첫 종목 추가</button>
               </div>
             ) : (
               <div className="table-wrapper">
@@ -523,6 +649,10 @@ export default function App() {
       </main>
 
       {/* 모달 */}
+      {showHistory && snapshots.length > 0 && (
+        <HistoryChart snapshots={snapshots} onClose={() => setShowHistory(false)} />
+      )}
+
       {showModal && (
         <AddStockModal
           onAdd={addHolding}
