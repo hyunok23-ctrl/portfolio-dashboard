@@ -5,8 +5,89 @@ export default async function handler(req, res) {
   const codeList = codes.split(',').map(c => c.trim()).filter(Boolean);
   const results = {};
 
-  const fetch2 = async (sym) => {
-    const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + sym + '?interval=1d&range=1d';
+  const APP_KEY    = process.env.KIS_APP_KEY;
+  const APP_SECRET = process.env.KIS_APP_SECRET;
+  const REDIS_URL  = process.env.KV_REST_API_URL || process.env.REDIS_URL;
+  const REDIS_TOKEN= process.env.KV_REST_API_TOKEN;
+
+  // ── Redis 헬퍼 ──────────────────────────────────────────
+  const redisGet = async (key) => {
+    if (!REDIS_URL || !REDIS_TOKEN) return null;
+    try {
+      const r = await fetch(`${REDIS_URL}/get/${key}`, {
+        headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+      });
+      const d = await r.json();
+      return d?.result ?? null;
+    } catch { return null; }
+  };
+
+  const redisSet = async (key, value, exSeconds) => {
+    if (!REDIS_URL || !REDIS_TOKEN) return;
+    try {
+      await fetch(`${REDIS_URL}/set/${key}/${encodeURIComponent(value)}${exSeconds ? `/ex/${exSeconds}` : ''}`, {
+        headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+      });
+    } catch {}
+  };
+
+  // ── 한투 액세스 토큰 발급 (Redis 캐싱) ──────────────────
+  const getKisToken = async () => {
+    if (!APP_KEY || !APP_SECRET) return null;
+    const cached = await redisGet('kis_access_token');
+    if (cached) return cached;
+
+    try {
+      const r = await fetch('https://openapi.koreainvestment.com:9443/oauth2/tokenP', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'client_credentials',
+          appkey: APP_KEY,
+          appsecret: APP_SECRET
+        })
+      });
+      const d = await r.json();
+      if (d?.access_token) {
+        // 23시간 캐싱 (토큰 유효기간 24시간)
+        await redisSet('kis_access_token', d.access_token, 82800);
+        return d.access_token;
+      }
+    } catch {}
+    return null;
+  };
+
+  // ── 한투 API 시세 조회 ───────────────────────────────────
+  const fetchKisPrice = async (code, token) => {
+    if (!token) return null;
+    try {
+      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=${code}`;
+      const r = await fetch(url, {
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+          appkey: APP_KEY,
+          appsecret: APP_SECRET,
+          tr_id: 'FHKST01010100'
+        }
+      });
+      const d = await r.json();
+      const o = d?.output;
+      if (!o || !o.stck_prpr) return null;
+
+      const price     = parseInt(o.stck_prpr, 10);
+      const prev      = parseInt(o.stck_bsop_date ? o.stck_sdpr : o.bstp_nmix_prpr || o.stck_prpr, 10);
+      const changePrice = parseInt(o.prdy_vrss, 10) || 0;
+      const change    = parseFloat(o.prdy_ctrt) || 0;
+      const name      = o.hts_kor_isnm || code;
+
+      return { code, name, price, change, changePrice };
+    } catch { return null; }
+  };
+
+  // ── Yahoo Finance 폴백 ───────────────────────────────────
+  const fetchYahoo = async (sym) => {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
     const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!r.ok) return null;
     const d = await r.json();
@@ -14,57 +95,62 @@ export default async function handler(req, res) {
     return m?.regularMarketPrice ? m : null;
   };
 
-  // 두 suffix 모두 시도해서 거래소 정보로 판단
-  const fetchBest = async (code) => {
-    const results = {};
+  const fetchYahooBest = async (code) => {
+    const res2 = {};
     await Promise.all(['.KS', '.KQ'].map(async (s) => {
       try {
-        const m = await fetch2(code + s);
-        if (m) results[s] = m;
-      } catch (e) {}
+        const m = await fetchYahoo(code + s);
+        if (m) res2[s] = m;
+      } catch {}
     }));
-
-    // exchangeName으로 판단
     for (const s of ['.KS', '.KQ']) {
-      const m = results[s];
+      const m = res2[s];
       if (!m) continue;
       const exch = (m.exchangeName || m.fullExchangeName || '').toUpperCase();
-      // KSE = 코스피, KOE = 코스닥
       if (s === '.KS' && (exch.includes('KSE') || exch.includes('KOSPI') || exch.includes('KSC'))) return m;
       if (s === '.KQ' && (exch.includes('KOE') || exch.includes('KOSDAQ') || exch.includes('KOQ'))) return m;
     }
-
-    // 거래소 판단 실패시 가격이 더 높은 걸 사용 (더 정확한 경향)
-    const ks = results['.KS'];
-    const kq = results['.KQ'];
+    const ks = res2['.KS'], kq = res2['.KQ'];
     if (ks && kq) {
-      // 두 개 다 있으면 exchangeName으로 재시도
-      const ksExch = (ks.exchangeName || '').toUpperCase();
       const kqExch = (kq.exchangeName || '').toUpperCase();
+      const ksExch = (ks.exchangeName || '').toUpperCase();
       if (kqExch.includes('KOE') || kqExch.includes('KOQ')) return kq;
       if (ksExch.includes('KSE') || ksExch.includes('KSC')) return ks;
-      return ks; // 기본은 KS
+      return ks;
     }
     return ks || kq || null;
   };
 
+  // ── 메인 처리 ────────────────────────────────────────────
+  const token = await getKisToken();
+
   await Promise.all(codeList.map(async (code) => {
     try {
-      const m = await fetchBest(code);
+      // 1) 한투 API 시도
+      const kisResult = await fetchKisPrice(code, token);
+      if (kisResult) {
+        results[code] = kisResult;
+        return;
+      }
+
+      // 2) 한투 실패 시 Yahoo Finance 폴백
+      const m = await fetchYahooBest(code);
       if (!m) {
         results[code] = { code, name: code, price: 0, change: 0, changePrice: 0, error: true };
         return;
       }
       const price = Math.round(m.regularMarketPrice);
-      const prev = Math.round(m.chartPreviousClose || m.previousClose || price);
-      const cp = price - prev;
-      const ch = prev > 0 ? parseFloat(((cp / prev) * 100).toFixed(2)) : 0;
-      const raw = (m.longName || m.shortName || '').split(',')[0].replace(/\.(KS|KQ)$/i, '').trim();
-      const name = (raw && !/^\d+$/.test(raw)) ? raw : code;
-      results[code] = { code, name, price, change: ch, changePrice: cp };
+      const prev  = Math.round(m.chartPreviousClose || m.previousClose || price);
+      const cp    = price - prev;
+      const ch    = prev > 0 ? parseFloat(((cp / prev) * 100).toFixed(2)) : 0;
+      const raw   = (m.longName || m.shortName || '').split(',')[0].replace(/\.(KS|KQ)$/i, '').trim();
+      const name  = (raw && !/^\d+$/.test(raw)) ? raw : code;
+      results[code] = { code, name, price, change: ch, changePrice: cp, source: 'yahoo' };
+
     } catch (e) {
       results[code] = { code, name: code, price: 0, change: 0, changePrice: 0, error: true };
     }
   }));
+
   return res.status(200).json(results);
 }
