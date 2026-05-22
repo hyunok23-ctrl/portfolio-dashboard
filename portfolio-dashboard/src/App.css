@@ -769,3 +769,39 @@ td.zero { color: var(--zero); }
   .history-body { padding: 14px; }
   .history-summary { gap: 10px; font-size: 0.75rem; }
 }
+
+/* ─── 계좌별 그룹 & 소계 ─────────────────────────────── */
+.account-group-header td {
+  padding: 16px 12px 6px;
+  border-bottom: none;
+  background: transparent;
+}
+.account-group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  padding: 3px 10px;
+  background: rgba(0,212,170,0.08);
+  border-radius: 20px;
+  border: 1px solid rgba(0,212,170,0.2);
+}
+
+.account-subtotal {
+  background: var(--surface2) !important;
+}
+.account-subtotal td {
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border2) !important;
+  font-size: 0.82rem;
+}
+.account-subtotal:hover {
+  background: var(--surface2) !important;
+}
+.subtotal-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text2);
+  letter-spacing: 0.05em;
+}

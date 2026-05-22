@@ -32,6 +32,14 @@ const fmt = (n) => Math.round(n).toLocaleString('ko-KR');
 const fmtRate = (n) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
 const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero');
 
+const getAccountType = (name) => {
+  if (name.includes('(ISA)')) return 'ISA계좌';
+  if (name.includes('(연금)')) return '연금계좌';
+  return '종합계좌';
+};
+
+const ACCOUNT_ORDER = ['종합계좌', '연금계좌', 'ISA계좌'];
+
 // ─── 컴포넌트: 종목 추가 모달 ──────────────────────────
 function AddStockModal({ onAdd, onClose }) {
   const [name, setName] = useState('');
