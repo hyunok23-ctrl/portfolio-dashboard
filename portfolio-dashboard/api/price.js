@@ -85,7 +85,7 @@ export default async function handler(req, res) {
         ? rawName.trim()
         : code;
 
-      return { code, name, price, change, changePrice };
+      return { code, name, price, change, changePrice, _debug: { hts_kor_isnm: o.hts_kor_isnm, prdt_abrv_name: o.prdt_abrv_name } };
     } catch { return null; }
   };
 
