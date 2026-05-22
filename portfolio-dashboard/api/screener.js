@@ -38,26 +38,24 @@ export default async function handler(req, res) {
     }
 
     const m = parseInt(period);
-    const indexChange = indexChanges?.[m];
+    const mStr = String(m); // Redis JSON 저장 시 키가 문자열로 저장됨
+    const indexChange = indexChanges?.[mStr] || indexChanges?.[m];
     const sectors = [...new Set(allData.map(s => s.sector).filter(Boolean))].sort();
 
     const filtered = allData.filter(s => {
-      // 시장 필터
       if (market !== 'ALL' && s.market !== market) return false;
-      // 섹터 필터
       if (sector !== 'ALL' && s.sector !== sector) return false;
-      // PER 필터
       if (!s.per || s.per <= 0 || s.per > parseFloat(maxPer)) return false;
-      // PBR 필터
       if (!s.pbr || s.pbr <= 0 || s.pbr > parseFloat(maxPbr)) return false;
 
-      const stockChange = s.changes?.[m];
+      // 문자열/숫자 키 모두 시도
+      const stockChange = s.changes?.[mStr] ?? s.changes?.[m];
       if (stockChange === null || stockChange === undefined) return false;
 
       const refIndex = s.market === 'KOSPI' ? indexChange?.KOSPI : indexChange?.KOSDAQ;
 
-      // 지수 데이터 없으면 종목 등락률만으로 필터 (마이너스 종목 표시)
       if (refIndex === null || refIndex === undefined) {
+        // 지수 없으면 종목 등락률 기준 (하락/횡보 종목)
         return stockChange <= parseFloat(minUnderperform);
       }
 
@@ -65,18 +63,17 @@ export default async function handler(req, res) {
       return underperform >= parseFloat(minUnderperform);
 
     }).map(s => {
-      const stockChange = s.changes?.[m];
+      const stockChange = s.changes?.[mStr] ?? s.changes?.[m];
       const refIndex = s.market === 'KOSPI' ? indexChange?.KOSPI : indexChange?.KOSDAQ;
-      const underperform = (refIndex !== null && refIndex !== undefined && stockChange !== null)
-        ? parseFloat((refIndex - stockChange).toFixed(2))
-        : null;
+      const underperform = (refIndex != null && stockChange != null)
+        ? parseFloat((refIndex - stockChange).toFixed(2)) : null;
       return {
         ...s,
-        stockChange: stockChange !== null && stockChange !== undefined ? parseFloat(stockChange.toFixed(2)) : null,
-        indexChange: refIndex !== null && refIndex !== undefined ? parseFloat(refIndex.toFixed(2)) : null,
+        stockChange: stockChange != null ? parseFloat(stockChange.toFixed(2)) : null,
+        indexChange: refIndex != null ? parseFloat(refIndex.toFixed(2)) : null,
         underperform,
       };
-    }).sort((a, b) => (b.underperform ?? -b.stockChange ?? 0) - (a.underperform ?? -a.stockChange ?? 0));
+    }).sort((a, b) => (b.underperform ?? 0) - (a.underperform ?? 0));
 
     return res.status(200).json({
       ready: true,
