@@ -6,7 +6,6 @@ export default async function handler(req, res) {
   const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
   const APP_KEY     = process.env.KIS_APP_KEY;
   const APP_SECRET  = process.env.KIS_APP_SECRET;
-  const KRX_API_KEY = process.env.KRX_API_KEY;
 
   // ── Redis 헬퍼 ──────────────────────────────────────────
   const redisSet = async (key, value, exSeconds) => {
@@ -15,7 +14,7 @@ export default async function handler(req, res) {
         `${REDIS_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(JSON.stringify(value))}${exSeconds ? `/ex/${exSeconds}` : ''}`,
         { headers: { Authorization: `Bearer ${REDIS_TOKEN}` } }
       );
-    } catch (e) { console.error('redisSet error', e); }
+    } catch {}
   };
 
   const redisGet = async (key) => {
@@ -40,84 +39,126 @@ export default async function handler(req, res) {
       });
       const d = await r.json();
       if (d?.access_token) {
-        await fetch(`${REDIS_URL}/set/kis_access_token/${encodeURIComponent(d.access_token)}/ex/82800`, {
-          headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
-        });
+        await redisSet('kis_access_token', d.access_token, 82800);
         return d.access_token;
       }
     } catch {}
     return null;
   };
 
-  // ── KRX Open API: PER/PBR/섹터 전체 종목 ──────────────
-  // AUTH_KEY를 헤더에 담아 REST 방식으로 호출
-  const fetchKrxFundamental = async (market) => {
-    // market: 'STK'(코스피) or 'KSQ'(코스닥)
+  // ── 한투 업종코드 → 섹터명 매핑 ────────────────────────
+  const SECTOR_MAP = {
+    '0001':'종합(KOSPI)', '0002':'대형주', '0003':'중형주', '0004':'소형주',
+    '0005':'음식료', '0006':'섬유의복', '0007':'종이목재', '0008':'화학',
+    '0009':'의약품', '0010':'비금속광물', '0011':'철강금속', '0012':'기계',
+    '0013':'전기전자', '0014':'의료정밀', '0015':'운수장비', '0016':'유통',
+    '0017':'전기가스', '0018':'건설', '0019':'운수창고', '0020':'통신',
+    '0021':'금융', '0022':'은행', '0023':'증권', '0024':'보험',
+    '0025':'서비스', '0026':'제조',
+    '1001':'종합(KOSDAQ)', '1002':'대형주', '1003':'중형주', '1004':'소형주',
+    '1005':'IT', '1006':'제조', '1007':'건설', '1008':'유통',
+    '1009':'운수창고', '1010':'금융', '1011':'통신', '1012':'서비스',
+    '1013':'의료정밀', '1014':'에너지화학', '1015':'반도체', '1016':'IT부품',
+    '1017':'디지털콘텐츠', '1018':'소프트웨어', '1019':'통신서비스', '1020':'IT하드웨어',
+  };
+
+  // 코스피 업종 코드 목록 (주요 섹터)
+  const KOSPI_SECTORS = ['0005','0006','0007','0008','0009','0010','0011','0012',
+    '0013','0014','0015','0016','0017','0018','0019','0020','0021','0025'];
+  // 코스닥 업종 코드 목록
+  const KOSDAQ_SECTORS = ['1005','1006','1007','1008','1009','1010','1011','1012',
+    '1013','1014','1015','1016','1017','1018','1019','1020'];
+
+  // ── 한투 API: 업종별 종목 목록 조회 ──────────────────────
+  const fetchStocksByIndustry = async (token, industryCode, market) => {
     try {
-      const today = getToday();
-      // KRX Open API - PER/PBR/배당수익률(전체종목)
-      const url = `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd`;
-      // KRX Open API REST endpoint
-      const apiUrl = `https://openapi.krx.co.kr/contents/OPP/USES/service/OPPUSES002_S2.cmd`;
-      
-      // 직접 REST API 호출 (AUTH_KEY 헤더 방식)
+      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-member`
+        + `?fid_input_iscd=${industryCode}`;
+      // 업종별 시세 API 사용
       const r = await fetch(
-        `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd?` +
-        `locale=ko_KR&trdDd=${today}&mktId=${market}&segTpCd=${market === 'KSQ' ? 'ALL' : ''}&adjStkPrc=2&csvxls_isNo=false&name=fileDown&url=dbms/MDC/STAT/standard/MDCSTAT03501`,
+        `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/ranking/market-cap`
+        + `?fid_cond_mrkt_div_code=${market === 'KOSPI' ? 'J' : 'Q'}`
+        + `&fid_cond_scr_div_code=20174`
+        + `&fid_input_iscd=${industryCode}`
+        + `&fid_div_cls_code=0`
+        + `&fid_blng_cls_code=0`
+        + `&fid_trgt_cls_code=0`
+        + `&fid_trgt_exls_cls_code=0`
+        + `&fid_input_price_1=&fid_input_price_2=`
+        + `&fid_vol_cnt=&fid_input_date_1=`,
         {
-          method: 'GET',
           headers: {
-            'AUTH_KEY': KRX_API_KEY,
-            'Content-Type': 'application/json',
+            'content-type': 'application/json',
+            authorization: `Bearer ${token}`,
+            appkey: APP_KEY, appsecret: APP_SECRET,
+            tr_id: 'FHPST01740000',
+            custtype: 'P',
           }
         }
       );
-      const data = await r.json();
-      return (data?.OutBlock_1 || data?.output || []).map(row => ({
-        code: row.ISU_SRT_CD || row.isuSrtCd,
-        name: row.ISU_ABBRV || row.isuAbbrv,
-        market: market === 'STK' ? 'KOSPI' : 'KOSDAQ',
-        per: parseFloat(row.PER || row.per) || null,
-        pbr: parseFloat(row.PBR || row.pbr) || null,
+      const d = await r.json();
+      return (d?.output || []).map(o => ({
+        code: o.stck_shrn_iscd,
+        name: o.hts_kor_isnm,
+        market,
+        sector: SECTOR_MAP[industryCode] || '기타',
+        per: parseFloat(o.per) || null,
+        pbr: parseFloat(o.pbr) || null,
       })).filter(s => s.code && s.code.length === 6);
-    } catch (e) {
-      console.error('KRX 펀더멘털 실패', market, e.message);
-      return [];
-    }
+    } catch { return []; }
   };
 
-  // ── KRX Open API: 업종(섹터) 정보 ───────────────────────
-  const fetchKrxSector = async (market) => {
+  // ── 한투 API: 종목 PER/PBR 조회 ────────────────────────
+  const fetchStockFundamental = async (token, code) => {
     try {
-      const today = getToday();
-      const r = await fetch(
-        `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd?` +
-        `locale=ko_KR&trdDd=${today}&mktId=${market}&segTpCd=${market === 'KSQ' ? 'ALL' : ''}&csvxls_isNo=false&name=fileDown&url=dbms/MDC/STAT/standard/MDCSTAT03901`,
-        {
-          headers: { 'AUTH_KEY': KRX_API_KEY, 'Content-Type': 'application/json' }
+      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price`
+        + `?fid_cond_mrkt_div_code=J&fid_input_iscd=${code}`;
+      const r = await fetch(url, {
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+          appkey: APP_KEY, appsecret: APP_SECRET,
+          tr_id: 'FHKST01010100',
         }
-      );
-      const data = await r.json();
-      const sectorMap = {};
-      (data?.OutBlock_1 || data?.output || []).forEach(row => {
-        const code = row.ISU_SRT_CD || row.isuSrtCd;
-        const sector = row.IDX_IND_NM || row.idxIndNm || '기타';
-        if (code) sectorMap[code] = sector;
       });
-      return sectorMap;
-    } catch (e) {
-      console.error('KRX 섹터 실패', market, e.message);
-      return {};
-    }
+      const d = await r.json();
+      const o = d?.output;
+      if (!o) return null;
+      return {
+        per: parseFloat(o.per) || null,
+        pbr: parseFloat(o.pbr) || null,
+        name: o.hts_kor_isnm || null,
+        sector: o.bstp_kor_isnm || null, // 업종명
+      };
+    } catch { return null; }
   };
 
-  // ── 날짜 헬퍼 ───────────────────────────────────────────
-  const getToday = () => {
-    const now = new Date();
-    const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-    return kst.getFullYear().toString()
-      + String(kst.getMonth() + 1).padStart(2, '0')
-      + String(kst.getDate()).padStart(2, '0');
+  // ── 한투 API: 지수 기간별 등락률 ────────────────────────
+  const fetchIndexChange = async (token, indexCode, months) => {
+    try {
+      const today = new Date();
+      const start = new Date(today);
+      start.setMonth(start.getMonth() - months);
+      const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,'');
+      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice`
+        + `?fid_cond_mrkt_div_code=U&fid_input_iscd=${indexCode}`
+        + `&fid_input_date_1=${fmt(start)}&fid_input_date_2=${fmt(today)}`
+        + `&fid_period_div_code=M`;
+      const r = await fetch(url, {
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+          appkey: APP_KEY, appsecret: APP_SECRET,
+          tr_id: 'FHKUP03500100',
+        }
+      });
+      const d = await r.json();
+      const output = d?.output2 || [];
+      if (output.length < 2) return null;
+      const latest = parseFloat(output[0]?.bstp_nmix_prpr);
+      const oldest = parseFloat(output[output.length-1]?.bstp_nmix_prpr);
+      return oldest > 0 ? ((latest - oldest) / oldest) * 100 : null;
+    } catch { return null; }
   };
 
   // ── 한투 API: 종목 기간별 등락률 ────────────────────────
@@ -141,7 +182,7 @@ export default async function handler(req, res) {
           'content-type': 'application/json',
           authorization: `Bearer ${token}`,
           appkey: APP_KEY, appsecret: APP_SECRET,
-          tr_id: 'FHKST03010100'
+          tr_id: 'FHKST03010100',
         }
       });
       const d = await r.json();
@@ -153,112 +194,83 @@ export default async function handler(req, res) {
     } catch { return null; }
   };
 
-  // ── 한투 API: 지수 기간별 등락률 ────────────────────────
-  const fetchIndexChange = async (token, indexCode, months) => {
-    try {
-      const today = new Date();
-      const start = new Date(today);
-      start.setMonth(start.getMonth() - months);
-      const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,'');
-      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice`
-        + `?fid_cond_mrkt_div_code=U&fid_input_iscd=${indexCode}`
-        + `&fid_input_date_1=${fmt(start)}&fid_input_date_2=${fmt(today)}`
-        + `&fid_period_div_code=M`;
-      const r = await fetch(url, {
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${token}`,
-          appkey: APP_KEY, appsecret: APP_SECRET,
-          tr_id: 'FHKUP03500100'
+  try {
+    console.log('크롤링 시작 (한투 API)...');
+    const token = await getToken();
+    if (!token) return res.status(500).json({ error: '토큰 발급 실패' });
+
+    // 1. 업종별 종목 목록 수집
+    const allStocksMap = {};
+
+    for (const sectorCode of [...KOSPI_SECTORS, ...KOSDAQ_SECTORS]) {
+      const market = KOSPI_SECTORS.includes(sectorCode) ? 'KOSPI' : 'KOSDAQ';
+      const stocks = await fetchStocksByIndustry(token, sectorCode, market);
+      stocks.forEach(s => {
+        if (s.code && !allStocksMap[s.code]) {
+          allStocksMap[s.code] = s;
         }
       });
-      const d = await r.json();
-      const output = d?.output2 || [];
-      if (output.length < 2) return null;
-      const latest = parseFloat(output[0]?.bstp_nmix_prpr);
-      const oldest = parseFloat(output[output.length-1]?.bstp_nmix_prpr);
-      return oldest > 0 ? ((latest - oldest) / oldest) * 100 : null;
-    } catch { return null; }
-  };
-
-  try {
-    console.log('크롤링 시작 (KRX Open API)...');
-
-    // 1. KRX Open API로 전체 종목 PER/PBR + 섹터 수집
-    const [kospiData, kosdaqData, kospiSector, kosdaqSector] = await Promise.all([
-      fetchKrxFundamental('STK'),
-      fetchKrxFundamental('KSQ'),
-      fetchKrxSector('STK'),
-      fetchKrxSector('KSQ'),
-    ]);
-
-    console.log(`KRX raw: KOSPI=${kospiData.length}, KOSDAQ=${kosdaqData.length}`);
-
-    const allStocks = [...kospiData, ...kosdaqData].map(s => ({
-      ...s,
-      sector: (s.market === 'KOSPI' ? kospiSector : kosdaqSector)[s.code] || '기타',
-    }));
-
-    if (allStocks.length === 0) {
-      // 응답 디버그용으로 raw 테스트
-      const testR = await fetch(
-        `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd?locale=ko_KR&trdDd=${getToday()}&mktId=STK&adjStkPrc=2&csvxls_isNo=false&name=fileDown&url=dbms/MDC/STAT/standard/MDCSTAT03501`,
-        { headers: { 'AUTH_KEY': KRX_API_KEY } }
-      );
-      const testText = await testR.text();
-      return res.status(200).json({ 
-        ok: false, 
-        message: 'KRX 데이터 없음',
-        debug: testText.slice(0, 500),
-        krxKeyExists: !!KRX_API_KEY
-      });
+      await new Promise(r => setTimeout(r, 100));
     }
 
-    // 2. 한투 토큰 + 지수 등락률
-    const token = await getToken();
+    let allStocks = Object.values(allStocksMap);
+    console.log(`업종별 수집: ${allStocks.length}개`);
+
+    // PER/PBR 없는 종목 보완 (inquire-price로 개별 조회)
+    const missingFund = allStocks.filter(s => !s.per || !s.pbr);
+    const batchSize = 10;
+    for (let i = 0; i < missingFund.length; i += batchSize) {
+      const batch = missingFund.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (s) => {
+        const f = await fetchStockFundamental(token, s.code);
+        if (f) {
+          s.per = f.per;
+          s.pbr = f.pbr;
+          if (f.name && !s.name) s.name = f.name;
+          if (f.sector && s.sector === '기타') s.sector = f.sector;
+        }
+      }));
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // 2. 지수 등락률
     const periods = [1, 3, 6, 12];
     const indexChanges = {};
-    if (token) {
-      for (const m of periods) {
-        const [kospi, kosdaq] = await Promise.all([
-          fetchIndexChange(token, '0001', m),
-          fetchIndexChange(token, '1001', m),
-        ]);
-        indexChanges[m] = { KOSPI: kospi, KOSDAQ: kosdaq };
-      }
+    for (const m of periods) {
+      const [kospi, kosdaq] = await Promise.all([
+        fetchIndexChange(token, '0001', m),
+        fetchIndexChange(token, '1001', m),
+      ]);
+      indexChanges[m] = { KOSPI: kospi, KOSDAQ: kosdaq };
     }
 
     // 3. 유효 종목 등락률 계산
-    const validStocks = allStocks.filter(s => s.per > 0 && s.pbr > 0);
+    const validStocks = allStocks.filter(s => s.per > 0 && s.pbr > 0 && s.code);
     const stockChanges = {};
 
-    if (token && validStocks.length > 0) {
-      const batchSize = 5;
-      for (let i = 0; i < validStocks.length; i += batchSize) {
-        const batch = validStocks.slice(i, i + batchSize);
-        const results = await Promise.all(
-          batch.map(s => Promise.all(periods.map(m => fetchStockChange(token, s.code, m))))
-        );
-        batch.forEach((s, idx) => {
-          stockChanges[s.code] = {};
-          periods.forEach((m, pi) => { stockChanges[s.code][m] = results[idx][pi]; });
-        });
-        await new Promise(r => setTimeout(r, 200));
-      }
+    for (let i = 0; i < validStocks.length; i += batchSize) {
+      const batch = validStocks.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(s => Promise.all(periods.map(m => fetchStockChange(token, s.code, m))))
+      );
+      batch.forEach((s, idx) => {
+        stockChanges[s.code] = {};
+        periods.forEach((m, pi) => { stockChanges[s.code][m] = results[idx][pi]; });
+      });
+      if (i % 100 === 0) console.log(`등락률: ${i}/${validStocks.length}`);
+      await new Promise(r => setTimeout(r, 300));
     }
 
-    // 4. 최종 데이터 합치기 + Redis 저장
-    const screenerData = allStocks
-      .filter(s => s.per > 0 && s.pbr > 0)
-      .map(s => ({
-        code: s.code,
-        name: s.name,
-        market: s.market,
-        sector: s.sector,
-        per: s.per,
-        pbr: s.pbr,
-        changes: stockChanges[s.code] || {},
-      }));
+    // 4. 최종 저장
+    const screenerData = validStocks.map(s => ({
+      code: s.code,
+      name: s.name || s.code,
+      market: s.market,
+      sector: s.sector || '기타',
+      per: s.per,
+      pbr: s.pbr,
+      changes: stockChanges[s.code] || {},
+    }));
 
     await redisSet('screener:data', screenerData, 90000);
     await redisSet('screener:index', indexChanges, 90000);
@@ -269,6 +281,7 @@ export default async function handler(req, res) {
       ok: true,
       total: screenerData.length,
       updated: new Date().toISOString(),
+      indexChanges,
     });
 
   } catch (e) {
