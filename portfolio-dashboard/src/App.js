@@ -886,38 +886,39 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* 헤더 */}
-      <header className="header">
-        <div className="header-left">
-          <div className="logo">PORTFOLIO</div>
-          <div className={`market-status ${marketOpen ? 'open' : 'closed'}`}>
-            <span className="dot" />
-            {marketOpen ? '장 중' : '장 마감'}
+      {/* 스티키 상단 영역: 헤더 + 요약카드 */}
+      <div className="sticky-top">
+        {/* 헤더 */}
+        <header className="header">
+          <div className="header-left">
+            <div className="logo">PORTFOLIO</div>
+            <div className={`market-status ${marketOpen ? 'open' : 'closed'}`}>
+              <span className="dot" />
+              {marketOpen ? '장 중' : '장 마감'}
+            </div>
           </div>
-        </div>
-        <div className="header-right">
-          {lastUpdated && (
-            <span className="last-updated">
-              {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 업데이트
-            </span>
-          )}
-          <button className={`btn-refresh ${loading ? 'spinning' : ''}`} onClick={fetchPrices} disabled={loading}>
-            ↻
-          </button>
-          <button className="btn-secondary" onClick={() => setShowHistory(true)}>
-            📈 이력
-          </button>
-          <button className="btn-secondary" onClick={() => setShowScreener(true)}>
-            📊 스크리너
-          </button>
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            + 종목 추가
-          </button>
-        </div>
-      </header>
+          <div className="header-right">
+            {lastUpdated && (
+              <span className="last-updated">
+                {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 업데이트
+              </span>
+            )}
+            <button className={`btn-refresh ${loading ? 'spinning' : ''}`} onClick={fetchPrices} disabled={loading}>
+              ↻
+            </button>
+            <button className="btn-secondary" onClick={() => setShowHistory(true)}>
+              <span className="btn-icon">📈</span><span className="btn-text"> 이력</span>
+            </button>
+            <button className="btn-secondary" onClick={() => setShowScreener(true)}>
+              <span className="btn-icon">📊</span><span className="btn-text"> 스크리너</span>
+            </button>
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <span className="btn-icon">+</span><span className="btn-text"> 종목 추가</span>
+            </button>
+          </div>
+        </header>
 
-      <main className="main">
-        {/* 요약 카드 */}
+        {/* 요약 카드 - sticky */}
         <section className="summary-grid">
           <div className="summary-card">
             <div className="summary-label">총 투자 원금</div>
@@ -939,7 +940,9 @@ export default function App() {
             <div className="summary-value">{holdings.length}<span className="unit">개</span></div>
           </div>
         </section>
+      </div>
 
+      <main className="main">
         <div className="content-grid">
           {/* 종목 테이블 */}
           <section className="table-section">
