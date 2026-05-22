@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
   const APP_KEY     = process.env.KIS_APP_KEY;
   const APP_SECRET  = process.env.KIS_APP_SECRET;
+  const KRX_API_KEY = process.env.KRX_API_KEY;
 
   // ── Redis 헬퍼 ──────────────────────────────────────────
   const redisSet = async (key, value, exSeconds) => {
@@ -48,92 +49,75 @@ export default async function handler(req, res) {
     return null;
   };
 
-  // ── KRX OTP 발급 + 데이터 다운로드 ──────────────────────
-  const fetchKrxData = async (params) => {
-    const KRX_OTP_URL = 'http://data.krx.co.kr/comm/fileDn/GenerateOTP/generate.cmd';
-    const KRX_DN_URL  = 'http://data.krx.co.kr/comm/fileDn/download_json/download.cmd';
-    const headers = {
-      'Referer': 'http://data.krx.co.kr/',
-      'User-Agent': 'Mozilla/5.0',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    };
-
-    // OTP 발급
-    const otpBody = new URLSearchParams(params).toString();
-    const otpRes = await fetch(KRX_OTP_URL, { method: 'POST', headers, body: otpBody });
-    const otp = await otpRes.text();
-    if (!otp || otp.length < 10) throw new Error('OTP 발급 실패');
-
-    // 데이터 다운로드
-    const dnRes = await fetch(KRX_DN_URL, {
-      method: 'POST',
-      headers,
-      body: new URLSearchParams({ code: otp }).toString()
-    });
-    return await dnRes.json();
-  };
-
-  // ── KRX: 오늘 날짜 (YYYYMMDD) ───────────────────────────
-  const getTodayKST = () => {
-    const now = new Date();
-    const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-    return kst.getFullYear().toString()
-      + String(kst.getMonth() + 1).padStart(2, '0')
-      + String(kst.getDate()).padStart(2, '0');
-  };
-
-  // ── KRX: PER/PBR/섹터 전체 종목 ─────────────────────────
-  const fetchKrxPbrPer = async (market) => {
+  // ── KRX Open API: PER/PBR/섹터 전체 종목 ──────────────
+  // AUTH_KEY를 헤더에 담아 REST 방식으로 호출
+  const fetchKrxFundamental = async (market) => {
     // market: 'STK'(코스피) or 'KSQ'(코스닥)
     try {
-      const today = getTodayKST();
-      const data = await fetchKrxData({
-        locale: 'ko_KR',
-        trdDd: today,
-        mktId: market,
-        segTpCd: market === 'KSQ' ? 'ALL' : '',
-        adjStkPrc: '2',
-        csvxls_isNo: 'false',
-        name: 'fileDown',
-        url: 'dbms/MDC/STAT/standard/MDCSTAT03501',
-      });
-      return (data?.OutBlock_1 || []).map(row => ({
-        code: row.ISU_SRT_CD,
-        name: row.ISU_ABBRV,
+      const today = getToday();
+      // KRX Open API - PER/PBR/배당수익률(전체종목)
+      const url = `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd`;
+      // KRX Open API REST endpoint
+      const apiUrl = `https://openapi.krx.co.kr/contents/OPP/USES/service/OPPUSES002_S2.cmd`;
+      
+      // 직접 REST API 호출 (AUTH_KEY 헤더 방식)
+      const r = await fetch(
+        `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd?` +
+        `locale=ko_KR&trdDd=${today}&mktId=${market}&segTpCd=${market === 'KSQ' ? 'ALL' : ''}&adjStkPrc=2&csvxls_isNo=false&name=fileDown&url=dbms/MDC/STAT/standard/MDCSTAT03501`,
+        {
+          method: 'GET',
+          headers: {
+            'AUTH_KEY': KRX_API_KEY,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+      const data = await r.json();
+      return (data?.OutBlock_1 || data?.output || []).map(row => ({
+        code: row.ISU_SRT_CD || row.isuSrtCd,
+        name: row.ISU_ABBRV || row.isuAbbrv,
         market: market === 'STK' ? 'KOSPI' : 'KOSDAQ',
-        per: parseFloat(row.PER) || null,
-        pbr: parseFloat(row.PBR) || null,
-        eps: parseFloat(row.EPS) || null,
-        bps: parseFloat(row.BPS) || null,
+        per: parseFloat(row.PER || row.per) || null,
+        pbr: parseFloat(row.PBR || row.pbr) || null,
       })).filter(s => s.code && s.code.length === 6);
     } catch (e) {
-      console.error('KRX PBR/PER 실패', market, e.message);
+      console.error('KRX 펀더멘털 실패', market, e.message);
       return [];
     }
   };
 
-  // ── KRX: 섹터(업종) 정보 ────────────────────────────────
+  // ── KRX Open API: 업종(섹터) 정보 ───────────────────────
   const fetchKrxSector = async (market) => {
     try {
-      const today = getTodayKST();
-      const data = await fetchKrxData({
-        locale: 'ko_KR',
-        trdDd: today,
-        mktId: market,
-        segTpCd: market === 'KSQ' ? 'ALL' : '',
-        csvxls_isNo: 'false',
-        name: 'fileDown',
-        url: 'dbms/MDC/STAT/standard/MDCSTAT03901',
-      });
+      const today = getToday();
+      const r = await fetch(
+        `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd?` +
+        `locale=ko_KR&trdDd=${today}&mktId=${market}&segTpCd=${market === 'KSQ' ? 'ALL' : ''}&csvxls_isNo=false&name=fileDown&url=dbms/MDC/STAT/standard/MDCSTAT03901`,
+        {
+          headers: { 'AUTH_KEY': KRX_API_KEY, 'Content-Type': 'application/json' }
+        }
+      );
+      const data = await r.json();
       const sectorMap = {};
-      (data?.OutBlock_1 || []).forEach(row => {
-        if (row.ISU_SRT_CD) sectorMap[row.ISU_SRT_CD] = row.IDX_IND_NM || '기타';
+      (data?.OutBlock_1 || data?.output || []).forEach(row => {
+        const code = row.ISU_SRT_CD || row.isuSrtCd;
+        const sector = row.IDX_IND_NM || row.idxIndNm || '기타';
+        if (code) sectorMap[code] = sector;
       });
       return sectorMap;
     } catch (e) {
       console.error('KRX 섹터 실패', market, e.message);
       return {};
     }
+  };
+
+  // ── 날짜 헬퍼 ───────────────────────────────────────────
+  const getToday = () => {
+    const now = new Date();
+    const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    return kst.getFullYear().toString()
+      + String(kst.getMonth() + 1).padStart(2, '0')
+      + String(kst.getDate()).padStart(2, '0');
   };
 
   // ── 한투 API: 종목 기간별 등락률 ────────────────────────
@@ -198,25 +182,36 @@ export default async function handler(req, res) {
   };
 
   try {
-    console.log('크롤링 시작 (KRX)...');
+    console.log('크롤링 시작 (KRX Open API)...');
 
-    // 1. KRX에서 전체 종목 PER/PBR + 섹터 수집
+    // 1. KRX Open API로 전체 종목 PER/PBR + 섹터 수집
     const [kospiData, kosdaqData, kospiSector, kosdaqSector] = await Promise.all([
-      fetchKrxPbrPer('STK'),
-      fetchKrxPbrPer('KSQ'),
+      fetchKrxFundamental('STK'),
+      fetchKrxFundamental('KSQ'),
       fetchKrxSector('STK'),
       fetchKrxSector('KSQ'),
     ]);
+
+    console.log(`KRX raw: KOSPI=${kospiData.length}, KOSDAQ=${kosdaqData.length}`);
 
     const allStocks = [...kospiData, ...kosdaqData].map(s => ({
       ...s,
       sector: (s.market === 'KOSPI' ? kospiSector : kosdaqSector)[s.code] || '기타',
     }));
 
-    console.log(`KRX 종목 수집: ${allStocks.length}개`);
-
     if (allStocks.length === 0) {
-      return res.status(200).json({ ok: false, message: 'KRX 데이터 없음 - 장 마감 후 재시도하세요' });
+      // 응답 디버그용으로 raw 테스트
+      const testR = await fetch(
+        `https://openapi.krx.co.kr/contents/COM/GenerateOTP/generate.cmd?locale=ko_KR&trdDd=${getToday()}&mktId=STK&adjStkPrc=2&csvxls_isNo=false&name=fileDown&url=dbms/MDC/STAT/standard/MDCSTAT03501`,
+        { headers: { 'AUTH_KEY': KRX_API_KEY } }
+      );
+      const testText = await testR.text();
+      return res.status(200).json({ 
+        ok: false, 
+        message: 'KRX 데이터 없음',
+        debug: testText.slice(0, 500),
+        krxKeyExists: !!KRX_API_KEY
+      });
     }
 
     // 2. 한투 토큰 + 지수 등락률
@@ -233,7 +228,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3. 유효 종목만 등락률 계산 (PER/PBR 있는 것만)
+    // 3. 유효 종목 등락률 계산
     const validStocks = allStocks.filter(s => s.per > 0 && s.pbr > 0);
     const stockChanges = {};
 
@@ -248,12 +243,11 @@ export default async function handler(req, res) {
           stockChanges[s.code] = {};
           periods.forEach((m, pi) => { stockChanges[s.code][m] = results[idx][pi]; });
         });
-        if (i % 50 === 0) console.log(`등락률 처리중: ${i}/${validStocks.length}`);
         await new Promise(r => setTimeout(r, 200));
       }
     }
 
-    // 4. 최종 데이터 합치기
+    // 4. 최종 데이터 합치기 + Redis 저장
     const screenerData = allStocks
       .filter(s => s.per > 0 && s.pbr > 0)
       .map(s => ({
@@ -266,7 +260,6 @@ export default async function handler(req, res) {
         changes: stockChanges[s.code] || {},
       }));
 
-    // 5. Redis 저장 (25시간 TTL)
     await redisSet('screener:data', screenerData, 90000);
     await redisSet('screener:index', indexChanges, 90000);
     await redisSet('screener:updated', new Date().toISOString(), 90000);
@@ -276,7 +269,6 @@ export default async function handler(req, res) {
       ok: true,
       total: screenerData.length,
       updated: new Date().toISOString(),
-      indexChanges,
     });
 
   } catch (e) {
