@@ -1,0 +1,27 @@
+name: 스크리너 데이터 크롤링
+
+on:
+  schedule:
+    - cron: '30 7 * * 1-5'  # 매일 16:30 KST (월~금)
+  workflow_dispatch:          # 수동 실행 가능
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 의존성 설치
+        run: npm install node-fetch cheerio
+
+      - name: 크롤링 실행
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          REDIS_TOKEN: ${{ secrets.REDIS_TOKEN }}
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+        run: node scripts/crawl.js
