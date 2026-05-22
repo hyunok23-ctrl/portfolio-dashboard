@@ -57,7 +57,28 @@ export default async function handler(req, res) {
     return null;
   };
 
-  // ── 한투 API 시세 조회 ───────────────────────────────────
+  // ── 종목명 조회 (Redis 캐싱 + 네이버 크롤링) ─────────────
+  const getStockName = async (code) => {
+    // Redis에서 먼저 확인
+    const cached = await redisGet(`sname:${code}`);
+    if (cached) return cached;
+
+    // 네이버 금융에서 크롤링
+    try {
+      const r = await fetch(`https://finance.naver.com/item/main.naver?code=${code}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      const html = await r.text();
+      const match = html.match(/<title>([^(]+)\(${code}\)/);
+      if (match) {
+        const name = match[1].trim();
+        // Redis에 30일 캐싱
+        await redisSet(`sname:${code}`, name, 2592000);
+        return name;
+      }
+    } catch {}
+    return code;
+  };
   const fetchKisPrice = async (code, token) => {
     if (!token) return null;
     try {
@@ -79,13 +100,13 @@ export default async function handler(req, res) {
       const changePrice = parseInt(o.prdy_vrss, 10) || 0;
       const change      = parseFloat(o.prdy_ctrt) || 0;
 
-      // 종목명: 여러 필드 순서대로 시도
+      // 종목명: API에서 못 받으면 네이버 크롤링 캐시 사용
       const rawName = o.hts_kor_isnm || o.prdt_abrv_name || o.itmt_name || '';
       const name = (rawName && rawName.trim() && !/^\d+$/.test(rawName.trim()))
         ? rawName.trim()
-        : code;
+        : await getStockName(code);
 
-      return { code, name, price, change, changePrice, _debug: { hts_kor_isnm: o.hts_kor_isnm, prdt_abrv_name: o.prdt_abrv_name } };
+      return { code, name, price, change, changePrice };
     } catch { return null; }
   };
 
