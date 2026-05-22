@@ -8,7 +8,7 @@ import './App.css';
 
 // ─── 상수 ──────────────────────────────────────────────
 const STORAGE_KEY = 'portfolio_holdings_v2';
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5분
+const REFRESH_INTERVAL = 30 * 1000; // 30초
 
 const COLORS = [
   '#00d4aa', '#4fc3f7', '#ff8a65', '#ce93d8',
