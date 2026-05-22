@@ -15,12 +15,12 @@ export default async function handler(req, res) {
   };
 
   const {
-    period = '1',       // 기간 (개월): 1, 3, 6, 12
-    market = 'ALL',     // ALL, KOSPI, KOSDAQ
-    sector = 'ALL',     // ALL or 섹터명
-    maxPer = '15',      // PER 상한
-    maxPbr = '1.5',     // PBR 상한
-    minUnderperform = '5', // 지수 대비 최소 하회율 (%)
+    period = '1',
+    market = 'ALL',
+    sector = 'ALL',
+    maxPer = '15',
+    maxPbr = '1.5',
+    minUnderperform = '5',
   } = req.query;
 
   try {
@@ -39,46 +39,44 @@ export default async function handler(req, res) {
 
     const m = parseInt(period);
     const indexChange = indexChanges?.[m];
-
-    // 섹터 목록 추출
     const sectors = [...new Set(allData.map(s => s.sector).filter(Boolean))].sort();
 
-    // 필터링
     const filtered = allData.filter(s => {
       // 시장 필터
       if (market !== 'ALL' && s.market !== market) return false;
-
       // 섹터 필터
       if (sector !== 'ALL' && s.sector !== sector) return false;
-
       // PER 필터
-      if (s.per === null || s.per <= 0 || s.per > parseFloat(maxPer)) return false;
-
+      if (!s.per || s.per <= 0 || s.per > parseFloat(maxPer)) return false;
       // PBR 필터
-      if (s.pbr === null || s.pbr <= 0 || s.pbr > parseFloat(maxPbr)) return false;
+      if (!s.pbr || s.pbr <= 0 || s.pbr > parseFloat(maxPbr)) return false;
 
-      // 지수 대비 하회 필터
       const stockChange = s.changes?.[m];
       if (stockChange === null || stockChange === undefined) return false;
 
       const refIndex = s.market === 'KOSPI' ? indexChange?.KOSPI : indexChange?.KOSDAQ;
-      if (refIndex === null || refIndex === undefined) return false;
 
-      const underperform = refIndex - stockChange; // 양수면 지수보다 낮게 상승
-      if (underperform < parseFloat(minUnderperform)) return false;
+      // 지수 데이터 없으면 종목 등락률만으로 필터 (마이너스 종목 표시)
+      if (refIndex === null || refIndex === undefined) {
+        return stockChange <= parseFloat(minUnderperform);
+      }
 
-      return true;
+      const underperform = refIndex - stockChange;
+      return underperform >= parseFloat(minUnderperform);
+
     }).map(s => {
       const stockChange = s.changes?.[m];
       const refIndex = s.market === 'KOSPI' ? indexChange?.KOSPI : indexChange?.KOSDAQ;
+      const underperform = (refIndex !== null && refIndex !== undefined && stockChange !== null)
+        ? parseFloat((refIndex - stockChange).toFixed(2))
+        : null;
       return {
         ...s,
-        stockChange: stockChange !== null ? parseFloat(stockChange?.toFixed(2)) : null,
-        indexChange: refIndex !== null ? parseFloat(refIndex?.toFixed(2)) : null,
-        underperform: refIndex !== null && stockChange !== null
-          ? parseFloat((refIndex - stockChange).toFixed(2)) : null,
+        stockChange: stockChange !== null && stockChange !== undefined ? parseFloat(stockChange.toFixed(2)) : null,
+        indexChange: refIndex !== null && refIndex !== undefined ? parseFloat(refIndex.toFixed(2)) : null,
+        underperform,
       };
-    }).sort((a, b) => (b.underperform || 0) - (a.underperform || 0)); // 하회율 큰 순
+    }).sort((a, b) => (b.underperform ?? -b.stockChange ?? 0) - (a.underperform ?? -a.stockChange ?? 0));
 
     return res.status(200).json({
       ready: true,
@@ -86,7 +84,7 @@ export default async function handler(req, res) {
       total: filtered.length,
       sectors,
       indexChanges: indexChange,
-      stocks: filtered.slice(0, 100), // 최대 100개
+      stocks: filtered.slice(0, 100),
     });
 
   } catch (e) {
