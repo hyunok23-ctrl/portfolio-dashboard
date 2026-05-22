@@ -525,7 +525,21 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {enriched.map((h, idx) => (
+                    {ACCOUNT_ORDER.map(accountType => {
+                      const group = enriched.filter(h => getAccountType(h.name) === accountType);
+                      if (group.length === 0) return null;
+                      const subPrincipal = group.reduce((s, h) => s + h.principal, 0);
+                      const subEval = group.reduce((s, h) => s + h.evalAmount, 0);
+                      const subProfit = subEval - subPrincipal;
+                      const subRate = subPrincipal > 0 ? (subProfit / subPrincipal) * 100 : 0;
+                      return (
+                        <React.Fragment key={accountType}>
+                          <tr className="account-group-header">
+                            <td colSpan="9"><span className="account-group-label">{accountType}</span></td>
+                          </tr>
+                          {group.map((h) => {
+                            const idx = enriched.indexOf(h);
+                            return (
                       <tr key={h.id} style={{ '--row-color': COLORS[idx % COLORS.length] }}>
                         <td>
                           <div className="stock-name-cell">
@@ -606,7 +620,19 @@ export default function App() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                            );
+                          })}
+                          <tr className="account-subtotal">
+                            <td colSpan="4"><span className="subtotal-label">{accountType} 소계</span></td>
+                            <td className="num">{fmt(subPrincipal)}</td>
+                            <td className="num">{subEval > 0 ? fmt(subEval) : '—'}</td>
+                            <td className={`num ${cls(subProfit)}`}>{subEval > 0 ? (subProfit >= 0 ? '+' : '') + fmt(subProfit) : '—'}</td>
+                            <td className={`num rate-cell ${cls(subRate)}`}>{subEval > 0 ? fmtRate(subRate) : '—'}</td>
+                            <td></td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
