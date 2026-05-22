@@ -75,11 +75,15 @@ export default async function handler(req, res) {
       const o = d?.output;
       if (!o || !o.stck_prpr) return null;
 
-      const price     = parseInt(o.stck_prpr, 10);
-      const prev      = parseInt(o.stck_bsop_date ? o.stck_sdpr : o.bstp_nmix_prpr || o.stck_prpr, 10);
+      const price       = parseInt(o.stck_prpr, 10);
       const changePrice = parseInt(o.prdy_vrss, 10) || 0;
-      const change    = parseFloat(o.prdy_ctrt) || 0;
-      const name      = o.hts_kor_isnm || code;
+      const change      = parseFloat(o.prdy_ctrt) || 0;
+
+      // 종목명: 여러 필드 순서대로 시도
+      const rawName = o.hts_kor_isnm || o.prdt_abrv_name || o.itmt_name || '';
+      const name = (rawName && rawName.trim() && !/^\d+$/.test(rawName.trim()))
+        ? rawName.trim()
+        : code;
 
       return { code, name, price, change, changePrice };
     } catch { return null; }
