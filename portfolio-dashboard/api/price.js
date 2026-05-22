@@ -57,23 +57,27 @@ export default async function handler(req, res) {
     return null;
   };
 
-  // ── 종목명 조회 (Redis 캐싱 + 네이버 크롤링) ─────────────
-  const getStockName = async (code) => {
-    // Redis에서 먼저 확인
+  // ── 종목명 조회 (한투 search-stock-info + Redis 캐싱) ────
+  const getStockName = async (code, token) => {
     const cached = await redisGet(`sname:${code}`);
     if (cached) return cached;
-
-    // 네이버 금융에서 크롤링
+    if (!token) return code;
     try {
-      const r = await fetch(`https://finance.naver.com/item/main.naver?code=${code}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PDNO=${code}&PRDT_TYPE_CD=300`;
+      const r = await fetch(url, {
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+          appkey: APP_KEY,
+          appsecret: APP_SECRET,
+          tr_id: 'CTPF1002R',
+          custtype: 'P',
+        }
       });
-      const html = await r.text();
-      const match = html.match(/<title>([^(]+)\(${code}\)/);
-      if (match) {
-        const name = match[1].trim();
-        // Redis에 30일 캐싱
-        await redisSet(`sname:${code}`, name, 2592000);
+      const d = await r.json();
+      const name = d?.output?.prdt_abrv_name || d?.output?.prdt_name || '';
+      if (name && !/^\d+$/.test(name)) {
+        await redisSet(`sname:${code}`, name, 2592000); // 30일 캐싱
         return name;
       }
     } catch {}
@@ -104,7 +108,7 @@ export default async function handler(req, res) {
       const rawName = o.hts_kor_isnm || o.prdt_abrv_name || o.itmt_name || '';
       const name = (rawName && rawName.trim() && !/^\d+$/.test(rawName.trim()))
         ? rawName.trim()
-        : await getStockName(code);
+        : await getStockName(code, token);
 
       return { code, name, price, change, changePrice };
     } catch { return null; }
