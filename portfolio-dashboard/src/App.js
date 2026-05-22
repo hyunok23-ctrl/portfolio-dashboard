@@ -185,6 +185,164 @@ function AddStockModal({ onAdd, onClose }) {
 }
 
 
+// ─── 컴포넌트: 종목 상세 모달 (캔들 + 투자자동향) ────────
+const PERIODS = [
+  { key: '1D', label: '1일' },
+  { key: '1M', label: '1개월' },
+  { key: '1W', label: '1주' },
+  { key: '1Y', label: '1년' },
+];
+
+function CandleChart({ candles }) {
+  if (!candles || candles.length === 0) return <div className="chart-empty">데이터 없음</div>;
+  const max = Math.max(...candles.map(c => c.high));
+  const min = Math.min(...candles.map(c => c.low));
+  const range = max - min || 1;
+  const H = 180;
+  const W = Math.max(candles.length * 14, 300);
+  const toY = (v) => ((max - v) / range) * H;
+
+  return (
+    <div className="candle-scroll">
+      <svg width={W} height={H + 20} style={{ display: 'block' }}>
+        {candles.map((c, i) => {
+          const x = i * 14 + 7;
+          const isUp = c.close >= c.open;
+          const color = isUp ? '#ff4747' : '#4fc3f7';
+          const bodyTop = toY(Math.max(c.open, c.close));
+          const bodyH = Math.max(Math.abs(toY(c.open) - toY(c.close)), 1);
+          return (
+            <g key={i}>
+              <line x1={x} y1={toY(c.high)} x2={x} y2={toY(c.low)} stroke={color} strokeWidth={1} />
+              <rect x={x - 4} y={bodyTop} width={8} height={bodyH} fill={color} />
+            </g>
+          );
+        })}
+        {candles.map((c, i) => i % Math.ceil(candles.length / 6) === 0 ? (
+          <text key={i} x={i * 14 + 7} y={H + 14} textAnchor="middle" fontSize={9} fill="#4a5d78">{c.label}</text>
+        ) : null)}
+      </svg>
+    </div>
+  );
+}
+
+function StockDetailModal({ stock, onClose }) {
+  const [period, setPeriod] = useState('1M');
+  const [candles, setCandles] = useState([]);
+  const [investor, setInvestor] = useState([]);
+  const [loadingCandle, setLoadingCandle] = useState(false);
+  const [loadingInvestor, setLoadingInvestor] = useState(false);
+
+  const fetchCandle = useCallback(async (p) => {
+    setLoadingCandle(true);
+    try {
+      const r = await fetch(`/api/chart?code=${stock.code}&type=candle&period=${p}`);
+      const d = await r.json();
+      setCandles(d.candles || []);
+    } catch {}
+    setLoadingCandle(false);
+  }, [stock.code]);
+
+  const fetchInvestor = useCallback(async () => {
+    setLoadingInvestor(true);
+    try {
+      const r = await fetch(`/api/chart?code=${stock.code}&type=investor`);
+      const d = await r.json();
+      setInvestor(d.investor || []);
+    } catch {}
+    setLoadingInvestor(false);
+  }, [stock.code]);
+
+  useEffect(() => {
+    fetchCandle(period);
+    fetchInvestor();
+  }, []);
+
+  const handlePeriod = (p) => {
+    setPeriod(p);
+    fetchCandle(p);
+  };
+
+  const fmtQty = (n) => {
+    if (!n && n !== 0) return '—';
+    const abs = Math.abs(n);
+    const sign = n > 0 ? '+' : n < 0 ? '-' : '';
+    if (abs >= 10000) return sign + (abs / 10000).toFixed(1) + '만';
+    return sign + abs.toLocaleString();
+  };
+  const invCls = (n) => n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero';
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="detail-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <span className="detail-name">{stock.name}</span>
+            <span className="detail-code">{stock.code}</span>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="detail-body">
+          {/* 캔들차트 */}
+          <div className="detail-section">
+            <div className="detail-section-header">
+              <span className="detail-section-title">캔들차트</span>
+              <div className="period-tabs">
+                {PERIODS.map(p => (
+                  <button
+                    key={p.key}
+                    className={`period-tab ${period === p.key ? 'active' : ''}`}
+                    onClick={() => handlePeriod(p.key)}
+                  >{p.label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="candle-wrap">
+              {loadingCandle
+                ? <div className="chart-loading">로딩 중...</div>
+                : <CandleChart candles={candles} />}
+            </div>
+          </div>
+
+          {/* 투자자 동향 */}
+          <div className="detail-section">
+            <div className="detail-section-header">
+              <span className="detail-section-title">투자자 동향 <span className="detail-hint">(순매수 수량, 최근 5일)</span></span>
+            </div>
+            {loadingInvestor ? (
+              <div className="chart-loading">로딩 중...</div>
+            ) : investor.length === 0 ? (
+              <div className="chart-empty">데이터 없음</div>
+            ) : (
+              <table className="investor-table">
+                <thead>
+                  <tr>
+                    <th>날짜</th>
+                    <th className="num">개인</th>
+                    <th className="num">외국인</th>
+                    <th className="num">기관</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {investor.map((row, i) => (
+                    <tr key={i}>
+                      <td>{row.label}</td>
+                      <td className={`num ${invCls(row.individual)}`}>{fmtQty(row.individual)}</td>
+                      <td className={`num ${invCls(row.foreign)}`}>{fmtQty(row.foreign)}</td>
+                      <td className={`num ${invCls(row.institution)}`}>{fmtQty(row.institution)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── 컴포넌트: 히스토리 차트 ───────────────────────────
 function HistoryChart({ snapshots, onClose }) {
   const [selected, setSelected] = useState(null);
@@ -293,6 +451,7 @@ export default function App() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editVal, setEditVal] = useState({});
+  const [selectedStock, setSelectedStock] = useState(null);
   const intervalRef = useRef(null);
 
   // 서버에서 데이터 불러오기
@@ -495,7 +654,7 @@ export default function App() {
           <section className="table-section">
             <div className="section-header">
               <h2>보유 종목</h2>
-              <span className="section-sub">5분마다 자동 갱신</span>
+              <span className="section-sub">30초마다 자동 갱신</span>
             </div>
 
             {enriched.length === 0 ? (
@@ -540,7 +699,7 @@ export default function App() {
                           {group.map((h) => {
                             const idx = enriched.indexOf(h);
                             return (
-                      <tr key={h.id} style={{ '--row-color': COLORS[idx % COLORS.length] }}>
+                      <tr key={h.id} style={{ '--row-color': COLORS[idx % COLORS.length] }} onClick={() => { if (editingId !== h.id) setSelectedStock(h); }} className={editingId !== h.id ? 'row-clickable' : ''}>
                         <td>
                           <div className="stock-name-cell">
                             <span className="color-dot" style={{ background: COLORS[idx % COLORS.length] }} />
@@ -689,6 +848,10 @@ export default function App() {
       </main>
 
       {/* 모달 */}
+      {selectedStock && (
+        <StockDetailModal stock={selectedStock} onClose={() => setSelectedStock(null)} />
+      )}
+
       {showHistory && snapshots.length > 0 && (
         <HistoryChart snapshots={snapshots} onClose={() => setShowHistory(false)} />
       )}

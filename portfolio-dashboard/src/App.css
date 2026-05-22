@@ -805,3 +805,151 @@ td.zero { color: var(--zero); }
   color: var(--text2);
   letter-spacing: 0.05em;
 }
+
+/* ─── 종목 상세 모달 ──────────────────────────────────── */
+.row-clickable { cursor: pointer; }
+.row-clickable:hover { background: var(--surface2); }
+
+.detail-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  width: 680px;
+  max-width: 95vw;
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  animation: slideUp 0.2s ease;
+}
+
+.detail-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 8px;
+}
+.detail-code {
+  font-size: 0.75rem;
+  color: var(--text3);
+  font-family: 'Space Mono', monospace;
+}
+
+.detail-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-section {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.detail-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+}
+.detail-hint {
+  font-size: 0.68rem;
+  color: var(--text3);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+/* 기간 탭 */
+.period-tabs {
+  display: flex;
+  gap: 4px;
+}
+.period-tab {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.period-tab:hover { border-color: var(--accent); color: var(--accent); }
+.period-tab.active { background: var(--accent); color: #0a0e1a; border-color: var(--accent); }
+
+/* 캔들차트 */
+.candle-wrap {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px 4px;
+  min-height: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.candle-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+.chart-loading, .chart-empty {
+  color: var(--text3);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 40px 0;
+  width: 100%;
+}
+
+/* 투자자 동향 테이블 */
+.investor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.investor-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+.investor-table th.num { text-align: right; }
+.investor-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+.investor-table td.num {
+  text-align: right;
+  font-family: 'Space Mono', monospace;
+  font-weight: 600;
+}
+.investor-table tr:last-child td { border-bottom: none; }
+.investor-table td.pos { color: var(--pos); }
+.investor-table td.neg { color: var(--neg); }
+.investor-table td.zero { color: var(--zero); }
+
+@media (max-width: 768px) {
+  .detail-modal { width: 95vw; }
+  .detail-body { padding: 14px; }
+  .period-tabs { flex-wrap: wrap; }
+}
