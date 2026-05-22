@@ -194,32 +194,53 @@ const PERIODS = [
 ];
 
 function CandleChart({ candles }) {
+  const [tooltip, setTooltip] = useState(null);
   if (!candles || candles.length === 0) return <div className="chart-empty">데이터 없음</div>;
   const max = Math.max(...candles.map(c => c.high));
   const min = Math.min(...candles.map(c => c.low));
   const range = max - min || 1;
   const H = 180;
-  const W = Math.max(candles.length * 14, 300);
+  const CW = 14;
+  const W = Math.max(candles.length * CW, 300);
   const toY = (v) => ((max - v) / range) * H;
 
   return (
-    <div className="candle-scroll">
-      <svg width={W} height={H + 20} style={{ display: 'block' }}>
+    <div className="candle-scroll" style={{ position: 'relative' }}>
+      {tooltip && (
+        <div className="candle-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          <div className="ct-label">{tooltip.label}</div>
+          <div className="ct-row"><span>시가</span><span>{tooltip.open?.toLocaleString()}</span></div>
+          <div className="ct-row"><span>고가</span><span className="pos">{tooltip.high?.toLocaleString()}</span></div>
+          <div className="ct-row"><span>저가</span><span className="neg">{tooltip.low?.toLocaleString()}</span></div>
+          <div className="ct-row"><span>종가</span><span style={{fontWeight:700}}>{tooltip.close?.toLocaleString()}</span></div>
+        </div>
+      )}
+      <svg width={W} height={H + 20} style={{ display: 'block' }}
+        onMouseLeave={() => setTooltip(null)}>
         {candles.map((c, i) => {
-          const x = i * 14 + 7;
+          const x = i * CW + 7;
           const isUp = c.close >= c.open;
           const color = isUp ? '#ff4747' : '#4fc3f7';
           const bodyTop = toY(Math.max(c.open, c.close));
           const bodyH = Math.max(Math.abs(toY(c.open) - toY(c.close)), 1);
           return (
-            <g key={i}>
+            <g key={i}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.ownerSVGElement.parentElement.getBoundingClientRect();
+                const svgRect = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+                const relX = x - (svgRect.left - rect.left);
+                setTooltip({ ...c, x: Math.min(relX, rect.width - 130), y: 4 });
+              }}
+              style={{ cursor: 'crosshair' }}
+            >
+              <rect x={x - 6} y={0} width={12} height={H} fill="transparent" />
               <line x1={x} y1={toY(c.high)} x2={x} y2={toY(c.low)} stroke={color} strokeWidth={1} />
               <rect x={x - 4} y={bodyTop} width={8} height={bodyH} fill={color} />
             </g>
           );
         })}
         {candles.map((c, i) => i % Math.ceil(candles.length / 6) === 0 ? (
-          <text key={i} x={i * 14 + 7} y={H + 14} textAnchor="middle" fontSize={9} fill="#4a5d78">{c.label}</text>
+          <text key={i} x={i * CW + 7} y={H + 14} textAnchor="middle" fontSize={9} fill="#4a5d78">{c.label}</text>
         ) : null)}
       </svg>
     </div>

@@ -948,6 +948,36 @@ td.zero { color: var(--zero); }
 .investor-table td.neg { color: var(--neg); }
 .investor-table td.zero { color: var(--zero); }
 
+/* 캔들 툴팁 */
+.candle-tooltip {
+  position: absolute;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  pointer-events: none;
+  z-index: 10;
+  min-width: 120px;
+  box-shadow: var(--shadow);
+}
+.ct-label {
+  font-family: 'Space Mono', monospace;
+  color: var(--text3);
+  font-size: 0.68rem;
+  margin-bottom: 5px;
+}
+.ct-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text2);
+  margin-bottom: 2px;
+}
+.ct-row span:first-child { color: var(--text3); }
+.ct-row .pos { color: var(--pos); }
+.ct-row .neg { color: var(--neg); }
+
 @media (max-width: 768px) {
   .detail-modal { width: 95vw; }
   .detail-body { padding: 14px; }
