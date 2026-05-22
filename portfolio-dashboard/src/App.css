@@ -948,6 +948,21 @@ td.zero { color: var(--zero); }
 .investor-table td.neg { color: var(--neg); }
 .investor-table td.zero { color: var(--zero); }
 
+/* 추정치 행 */
+.investor-estimate { background: rgba(0,212,170,0.04); }
+.estimate-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0,212,170,0.15);
+  color: var(--accent);
+  border: 1px solid rgba(0,212,170,0.3);
+  vertical-align: middle;
+  font-weight: 700;
+}
+
 /* 캔들 툴팁 */
 .candle-tooltip {
   position: absolute;

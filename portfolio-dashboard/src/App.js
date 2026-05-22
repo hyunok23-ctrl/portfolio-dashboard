@@ -347,8 +347,11 @@ function StockDetailModal({ stock, onClose }) {
                 </thead>
                 <tbody>
                   {investor.map((row, i) => (
-                    <tr key={i}>
-                      <td>{row.label}</td>
+                    <tr key={i} className={row.isEstimate ? 'investor-estimate' : ''}>
+                      <td>
+                        {row.label}
+                        {row.isEstimate && <span className="estimate-badge">추정</span>}
+                      </td>
                       <td className={`num ${invCls(row.individual)}`}>{fmtQty(row.individual)}</td>
                       <td className={`num ${invCls(row.foreign)}`}>{fmtQty(row.foreign)}</td>
                       <td className={`num ${invCls(row.institution)}`}>{fmtQty(row.institution)}</td>

@@ -143,18 +143,62 @@ export default async function handler(req, res) {
   // ── 투자자 동향 ──────────────────────────────────────────
   if (type === 'investor') {
     try {
+      const now = new Date();
+      const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+      const totalMin = kst.getHours() * 60 + kst.getMinutes();
+      const day = kst.getDay();
+      const isMarketOpen = day >= 1 && day <= 5 && totalMin >= 9 * 60 && totalMin < 15 * 60 + 30;
+
+      let todayRow = null;
+
+      // 장중: 추정 가집계 API (하루 4번 업데이트: 09:30 / 11:20 / 13:20 / 14:30)
+      if (isMarketOpen) {
+        try {
+          const estUrl = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/foreign-institution-total`
+            + `?fid_cond_mrkt_div_code=J&fid_input_iscd=${code}&fid_rank_sort_cls_code=0&fid_etc_cls_code=0`;
+          const estR = await fetch(estUrl, { headers: { ...baseHeaders, tr_id: 'FHPTJ04400000' } });
+          const estD = await estR.json();
+          const o = estD?.output1;
+          if (o) {
+            // 당일 추정치 (주식 수량)
+            const foreign = parseInt(o.frgn_ntby_qty) || 0;
+            const institution = parseInt(o.orgn_ntby_qty) || 0;
+            const individual = -(foreign + institution); // 개인 = -(외국인+기관) 추정
+            const mm = String(kst.getMonth() + 1).padStart(2, '0');
+            const dd = String(kst.getDate()).padStart(2, '0');
+            todayRow = {
+              label: `${mm}/${dd}`,
+              individual,
+              foreign,
+              institution,
+              isEstimate: true, // 추정치 표시용
+            };
+          }
+        } catch {}
+      }
+
+      // 전일 이전 확정 데이터 (최근 5일)
       const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-investor`
         + `?fid_cond_mrkt_div_code=J&fid_input_iscd=${code}`;
       const r = await fetch(url, { headers: { ...baseHeaders, tr_id: 'FHKST01010900' } });
       const d = await r.json();
       const o = Array.isArray(d?.output) ? d.output : [];
-      const rows = o.slice(0, 5).map(item => ({
+
+      // 당일 row 제거 (0으로 나오는 것 제거)
+      const todayStr = fmt8(kst);
+      const filtered = o.filter(item => item.stck_bsop_date !== todayStr);
+      const rows = filtered.slice(0, 5).map(item => ({
         label: (item.stck_bsop_date || '').slice(4,6) + '/' + (item.stck_bsop_date || '').slice(6,8),
         individual:  parseInt(item.prsn_ntby_qty) || 0,
         foreign:     parseInt(item.frgn_ntby_qty) || 0,
         institution: parseInt(item.orgn_ntby_qty) || 0,
+        isEstimate: false,
       }));
-      return res.status(200).json({ investor: rows });
+
+      // 당일 추정치를 맨 앞에 붙이기
+      const result = todayRow ? [todayRow, ...rows] : rows;
+      return res.status(200).json({ investor: result });
+
     } catch (e) {
       return res.status(500).json({ error: 'investor failed', detail: e.message });
     }
