@@ -197,6 +197,18 @@ export default async function handler(req, res) {
     const allStocks = Object.values(stockMap);
     console.log(`수집 완료: ${allStocks.length}개`);
 
+    // 빈 결과로 기존 데이터를 덮어쓰는 사고 방지 (GitHub Actions 크롤과 충돌 대비)
+    const MIN_STOCKS = 50;
+    if (allStocks.length < MIN_STOCKS) {
+      console.error(`수집된 종목 수(${allStocks.length})가 임계치(${MIN_STOCKS}) 미만 — 저장 건너뜀`);
+      return res.status(200).json({
+        ok: false,
+        skipped: true,
+        reason: 'insufficient_stocks',
+        collected: allStocks.length,
+      });
+    }
+
     // 2. 지수 등락률
     const periods = [1, 3, 6, 12];
     const indexChanges = {};
