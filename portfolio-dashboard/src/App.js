@@ -1137,6 +1137,7 @@ export default function App() {
                   <div key={idx} className="legend-item">
                     <span className="legend-dot" style={{ background: COLORS[idx % COLORS.length] }} />
                     <span className="legend-name">{d.name}</span>
+                    <span className="legend-value">{fmt(d.value)}원</span>
                     <span className="legend-pct">{d.pct.toFixed(1)}%</span>
                   </div>
                 ))}

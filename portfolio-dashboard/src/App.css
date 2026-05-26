@@ -392,15 +392,27 @@ td.zero { color: var(--zero); }
 }
 .legend-name {
   flex: 1;
+  min-width: 0;
   color: var(--text2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.legend-value {
+  font-family: 'Space Mono', monospace;
+  color: var(--text2);
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .legend-pct {
   font-family: 'Space Mono', monospace;
   color: var(--text);
   font-weight: 700;
+  flex-shrink: 0;
+  min-width: 44px;
+  text-align: right;
 }
 
 /* 파이 툴팁 */
