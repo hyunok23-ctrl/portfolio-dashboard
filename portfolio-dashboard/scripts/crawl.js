@@ -31,36 +31,45 @@ const kisH = (token, trId) => ({
   tr_id: trId, custtype: 'P',
 });
 
+// Naver는 EUC-KR로 응답 — 직접 디코딩 필요
+const eucKrDecoder = new TextDecoder('euc-kr');
+const fetchEucKr = async (url) => {
+  const r = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'ko-KR,ko;q=0.9',
+      'Referer': 'https://finance.naver.com/sise/',
+    }
+  });
+  const buf = Buffer.from(await r.arrayBuffer());
+  return eucKrDecoder.decode(buf);
+};
+
+// 시가총액 페이지 컬럼: 0=N, 1=종목명, 2=현재가, 3=전일비, 4=등락률,
+// 5=액면가, 6=시가총액, 7=상장주식수, 8=외국인비율, 9=거래량, 10=PER, 11=ROE
+// (PBR은 이 페이지에 없음 → 모바일 API에서 별도 수집)
 const fetchNaverMarket = async (sosok) => {
   const stocks = [];
   let page = 1;
   while (true) {
     try {
       const url = `https://finance.naver.com/sise/sise_market_sum.naver?sosok=${sosok}&page=${page}`;
-      const r = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'ko-KR,ko;q=0.9',
-          'Referer': 'https://finance.naver.com/sise/',
-        }
-      });
-      const html = await r.text();
+      const html = await fetchEucKr(url);
       const $ = cheerio.load(html);
       let found = 0;
       $('table.type_2 tbody tr').each((i, el) => {
         const tds = $(el).find('td');
-        if (tds.length < 10) return;
+        if (tds.length < 11) return;
         const nameEl = $(tds[1]).find('a');
         const name = nameEl.text().trim();
         const href = nameEl.attr('href') || '';
         const codeMatch = href.match(/code=(\d{6})/);
         if (!codeMatch || !name) return;
         const code = codeMatch[1];
-        const per = parseFloat($(tds[9]).text().replace(/,/g, '').trim());
-        const pbr = parseFloat($(tds[10]).text().replace(/,/g, '').trim());
-        if (code && name && per > 0 && pbr > 0) {
-          stocks.push({ code, name, market: sosok === 0 ? 'KOSPI' : 'KOSDAQ', sector: '기타', per, pbr });
+        const per = parseFloat($(tds[10]).text().replace(/,/g, '').trim());
+        if (code && name && per > 0) {
+          stocks.push({ code, name, market: sosok === 0 ? 'KOSPI' : 'KOSDAQ', sector: '기타', per, pbr: null });
           found++;
         }
       });
@@ -75,6 +84,24 @@ const fetchNaverMarket = async (sosok) => {
     }
   }
   return stocks;
+};
+
+// 네이버 모바일 API에서 PBR 단건 조회 (totalInfos 배열에서 code=='pbr' 추출)
+const fetchPbr = async (code) => {
+  try {
+    const r = await fetch(`https://m.stock.naver.com/api/stock/${code}/integration`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 Mobile',
+        'Accept': 'application/json',
+      }
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const it = (d?.totalInfos || []).find(x => x?.code === 'pbr');
+    if (!it?.value) return null;
+    const v = parseFloat(String(it.value).replace(/[^\d.\-]/g, ''));
+    return v > 0 && Number.isFinite(v) ? v : null;
+  } catch { return null; }
 };
 
 const fetchIndexChange = async (token, indexCode, months) => {
@@ -161,8 +188,24 @@ const fetchStockChange = async (token, code, months) => {
     if (i % 100 === 0) console.log(`  ${i}/${all.length}`);
     await new Promise(r => setTimeout(r, 300));
   }
+
+  console.log(`\n[5b] PBR 수집 (네이버 모바일 API, ${all.length}개)...`);
+  const pbrs = {};
+  let pbrOk = 0;
+  for (let i = 0; i < all.length; i += 20) {
+    const batch = all.slice(i, i + 20);
+    const results = await Promise.all(batch.map(s => fetchPbr(s.code)));
+    batch.forEach((s, idx) => {
+      pbrs[s.code] = results[idx];
+      if (results[idx] != null) pbrOk++;
+    });
+    if (i % 200 === 0) console.log(`  ${i}/${all.length} (PBR 확보: ${pbrOk})`);
+    await new Promise(r => setTimeout(r, 150));
+  }
+  console.log(`  PBR 확보 완료: ${pbrOk}/${all.length}`);
+
   console.log('\n[6] Redis 저장...');
-  const data = all.map(s => ({ ...s, changes: changes[s.code] || {} }));
+  const data = all.map(s => ({ ...s, pbr: pbrs[s.code] ?? null, changes: changes[s.code] || {} }));
   await redisSet('screener:data', data, 90000);
   await redisSet('screener:index', indexChanges, 90000);
   await redisSet('screener:updated', new Date().toISOString(), 90000);
