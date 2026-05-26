@@ -874,13 +874,18 @@ export default function App() {
   const totalProfit = totalEval - totalPrincipal;
   const totalProfitRate = totalPrincipal > 0 ? (totalProfit / totalPrincipal) * 100 : 0;
 
-  const pieData = enriched
-    .filter(h => h.evalAmount > 0)
-    .map(h => ({
-      name: h.name,
-      value: h.evalAmount,
-      pct: totalEval > 0 ? (h.evalAmount / totalEval) * 100 : 0,
-    }));
+  // 비중 차트는 종목코드 기준으로 합산 (같은 종목이 여러 계좌에 있어도 하나로)
+  const pieData = Object.values(
+    enriched
+      .filter(h => h.evalAmount > 0)
+      .reduce((acc, h) => {
+        if (!acc[h.code]) acc[h.code] = { code: h.code, name: h.name, value: 0 };
+        acc[h.code].value += h.evalAmount;
+        return acc;
+      }, {})
+  )
+    .map(d => ({ ...d, pct: totalEval > 0 ? (d.value / totalEval) * 100 : 0 }))
+    .sort((a, b) => b.value - a.value);
 
   const marketOpen = isMarketOpen();
 
