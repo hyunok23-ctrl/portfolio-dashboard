@@ -62,31 +62,72 @@ export default async function handler(req, res) {
   // ── 캔들차트 ────────────────────────────────────────────
   if (type === 'candle') {
     try {
-      // 1일: 분봉 (inquire-time-itemchartprice)
+      // 1일: 분봉 (inquire-time-itemchartprice는 한 번에 ~30개만 반환 → 페이지네이션)
       if (period === '1D') {
         const now = new Date();
         const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-        const hh = String(kst.getHours()).padStart(2,'0');
-        const mm = String(kst.getMinutes()).padStart(2,'0');
-        // 장 마감 후면 153000, 장중이면 현재시각
-        const isOpen = kst.getHours() * 60 + kst.getMinutes() >= 9*60 && kst.getHours() * 60 + kst.getMinutes() < 15*60+30;
-        const inputHour = isOpen ? `${hh}${mm}00` : '153000';
+        const totalMin = kst.getHours() * 60 + kst.getMinutes();
+        const isOpen = totalMin >= 9*60 && totalMin < 15*60+30;
+        // 시작 시각: 장중이면 현재, 그 외엔 직전 마감(15:30)
+        const startHour = isOpen ? kst.getHours() : 15;
+        const startMin  = isOpen ? kst.getMinutes() : 30;
 
-        const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=${code}&fid_input_hour_1=${inputHour}&fid_pw_data_incu_yn=Y`;
-        const r = await fetch(url, { headers: { ...baseHeaders, tr_id: 'FHKST03010200' } });
-        const d = await r.json();
-        const output = (d?.output2 || []).slice().reverse();
-        const candles = output.map(item => {
-          const h = item.stck_cntg_hour || '';
-          return {
-            label: h.slice(0,2) + ':' + h.slice(2,4),
-            open:  parseInt(item.stck_oprc) || 0,
-            high:  parseInt(item.stck_hgpr) || 0,
-            low:   parseInt(item.stck_lwpr) || 0,
-            close: parseInt(item.stck_prpr) || 0,
-            volume: parseInt(item.cntg_vol) || 0,
-          };
-        }).filter(c => c.close > 0);
+        const fetchMinuteBatch = async (hourStr) => {
+          const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice`
+            + `?fid_etc_cls_code=&fid_cond_mrkt_div_code=J&fid_input_iscd=${code}`
+            + `&fid_input_hour_1=${hourStr}&fid_pw_data_incu_yn=Y`;
+          const r = await fetch(url, { headers: { ...baseHeaders, tr_id: 'FHKST03010200' } });
+          const d = await r.json();
+          return d?.output2 || [];
+        };
+
+        // 15:30 → 09:00 까지 30분씩 거슬러 올라가며 호출
+        const seen = new Set();
+        const bars = [];
+        let curMin = startHour * 60 + startMin;
+        const minBoundary = 9 * 60; // 09:00
+        for (let i = 0; i < 16 && curMin >= minBoundary; i++) {
+          const h = Math.floor(curMin / 60);
+          const m = curMin % 60;
+          const hourStr = String(h).padStart(2,'0') + String(m).padStart(2,'0') + '00';
+          const batch = await fetchMinuteBatch(hourStr);
+          if (batch.length === 0) break;
+
+          let earliestBarMin = Infinity;
+          for (const item of batch) {
+            const t = item.stck_cntg_hour || '';
+            if (!t || seen.has(t)) continue;
+            const close = parseInt(item.stck_prpr) || 0;
+            if (close <= 0) continue;
+            seen.add(t);
+            bars.push({
+              t,
+              label: t.slice(0,2) + ':' + t.slice(2,4),
+              open:  parseInt(item.stck_oprc) || close,
+              high:  parseInt(item.stck_hgpr) || close,
+              low:   parseInt(item.stck_lwpr) || close,
+              close,
+              volume: parseInt(item.cntg_vol) || 0,
+            });
+            const bh = parseInt(t.slice(0,2));
+            const bm = parseInt(t.slice(2,4));
+            const bmin = bh * 60 + bm;
+            if (bmin < earliestBarMin) earliestBarMin = bmin;
+          }
+
+          if (!isFinite(earliestBarMin)) break;
+          // 다음 호출은 이번 배치의 가장 이른 시각 직전(-1분)으로
+          const nextMin = earliestBarMin - 1;
+          if (nextMin <= curMin - 1) {
+            curMin = nextMin;
+          } else {
+            // 진전이 없으면 강제로 30분 뒤로
+            curMin = curMin - 30;
+          }
+        }
+
+        bars.sort((a, b) => a.t.localeCompare(b.t));
+        const candles = bars.map(({ t, ...rest }) => rest);
         return res.status(200).json({ candles });
       }
 

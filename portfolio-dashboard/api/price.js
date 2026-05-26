@@ -57,31 +57,52 @@ export default async function handler(req, res) {
     return null;
   };
 
-  // ── 종목명 조회 (한투 search-stock-info + Redis 캐싱) ────
+  // 보유 종목 중 ETF/특수 종목명 하드코딩 폴백 (API 실패 시 마지막 안전망)
+  const NAME_FALLBACK = {
+    '395270': 'HANARO Fn K-반도체',
+    '292150': 'TIGER 코리아Top10',
+    '0167A0': 'SOL AI반도체TOP2플러스',
+    '396500': 'TIGER 반도체Top10',
+    '367760': 'RISE 네트워크인프라',
+    '091160': 'KODEX 반도체',
+    '005930': '삼성전자',
+    '005380': '현대차',
+    '010120': 'LS일렉트릭',
+    '031980': '피에스케이홀딩스',
+    '272210': '한화시스템',
+    '489790': '한화비전',
+  };
+
+  // ── 종목명 조회 (한투 search-stock-info, 여러 상품유형 시도 + Redis 캐싱) ────
+  // PRDT_TYPE_CD: 300=주식, 301=선물옵션, 302=채권, 512=ETF, 515=ETN, 558=ELW
+  const PRDT_TYPES = ['300', '512', '515'];
   const getStockName = async (code, token) => {
     const cached = await redisGet(`sname:${code}`);
-    if (cached) return cached;
-    if (!token) return code;
-    try {
-      const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PDNO=${code}&PRDT_TYPE_CD=300`;
-      const r = await fetch(url, {
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${token}`,
-          appkey: APP_KEY,
-          appsecret: APP_SECRET,
-          tr_id: 'CTPF1002R',
-          custtype: 'P',
+    if (cached && !/^\d+$/.test(cached) && cached !== code) return cached;
+    if (!token) return NAME_FALLBACK[code] || code;
+
+    for (const ptype of PRDT_TYPES) {
+      try {
+        const url = `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/search-stock-info?PDNO=${code}&PRDT_TYPE_CD=${ptype}`;
+        const r = await fetch(url, {
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${token}`,
+            appkey: APP_KEY,
+            appsecret: APP_SECRET,
+            tr_id: 'CTPF1002R',
+            custtype: 'P',
+          }
+        });
+        const d = await r.json();
+        const name = (d?.output?.prdt_abrv_name || d?.output?.prdt_name || '').trim();
+        if (name && !/^\d+$/.test(name) && name !== code) {
+          await redisSet(`sname:${code}`, name, 2592000); // 30일 캐싱
+          return name;
         }
-      });
-      const d = await r.json();
-      const name = d?.output?.prdt_abrv_name || d?.output?.prdt_name || '';
-      if (name && !/^\d+$/.test(name)) {
-        await redisSet(`sname:${code}`, name, 2592000); // 30일 캐싱
-        return name;
-      }
-    } catch {}
-    return code;
+      } catch {}
+    }
+    return NAME_FALLBACK[code] || code;
   };
   const fetchKisPrice = async (code, token) => {
     if (!token) return null;
@@ -104,11 +125,10 @@ export default async function handler(req, res) {
       const changePrice = parseInt(o.prdy_vrss, 10) || 0;
       const change      = parseFloat(o.prdy_ctrt) || 0;
 
-      // 종목명: API에서 못 받으면 네이버 크롤링 캐시 사용
-      const rawName = o.hts_kor_isnm || o.prdt_abrv_name || o.itmt_name || '';
-      const name = (rawName && rawName.trim() && !/^\d+$/.test(rawName.trim()))
-        ? rawName.trim()
-        : await getStockName(code, token);
+      // 종목명: 응답 값이 비었거나, 숫자만이거나, 코드와 동일하면 search-stock-info로 재조회
+      const rawName = (o.hts_kor_isnm || o.prdt_abrv_name || o.itmt_name || '').trim();
+      const isValidName = rawName && !/^\d+$/.test(rawName) && rawName !== code;
+      const name = isValidName ? rawName : await getStockName(code, token);
 
       return { code, name, price, change, changePrice };
     } catch { return null; }
@@ -165,7 +185,7 @@ export default async function handler(req, res) {
       // 2) 한투 실패 시 Yahoo Finance 폴백
       const m = await fetchYahooBest(code);
       if (!m) {
-        results[code] = { code, name: code, price: 0, change: 0, changePrice: 0, error: true };
+        results[code] = { code, name: NAME_FALLBACK[code] || code, price: 0, change: 0, changePrice: 0, error: true };
         return;
       }
       const price = Math.round(m.regularMarketPrice);
@@ -173,7 +193,7 @@ export default async function handler(req, res) {
       const cp    = price - prev;
       const ch    = prev > 0 ? parseFloat(((cp / prev) * 100).toFixed(2)) : 0;
       const raw   = (m.longName || m.shortName || '').split(',')[0].replace(/\.(KS|KQ)$/i, '').trim();
-      const name  = (raw && !/^\d+$/.test(raw)) ? raw : code;
+      const name  = (raw && !/^\d+$/.test(raw) && raw !== code) ? raw : (NAME_FALLBACK[code] || code);
       results[code] = { code, name, price, change: ch, changePrice: cp, source: 'yahoo' };
 
     } catch (e) {

@@ -144,18 +144,20 @@ export default async function handler(req, res) {
           + String(kst.getMonth()+1).padStart(2,'0')
           + String(kst.getDate()).padStart(2,'0');
       };
+      // 1·3개월은 일봉, 6개월은 주봉, 12개월은 월봉 (짧은 기간 데이터 포인트 부족 방지)
+      const periodCode = months <= 3 ? 'D' : months <= 6 ? 'W' : 'M';
       const r = await fetch(
         `https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice`
         + `?fid_cond_mrkt_div_code=J&fid_input_iscd=${code}`
         + `&fid_input_date_1=${fmt(start)}&fid_input_date_2=${fmt(today)}`
-        + `&fid_period_div_code=M&fid_org_adj_prc=0`,
+        + `&fid_period_div_code=${periodCode}&fid_org_adj_prc=0`,
         { headers: { ...kisHeaders(token), tr_id: 'FHKST03010100' } }
       );
       const d = await r.json();
-      const output = d?.output2 || [];
+      const output = (d?.output2 || []).filter(x => parseFloat(x?.stck_clpr) > 0);
       if (output.length < 2) return null;
-      const latest = parseFloat(output[0]?.stck_clpr);
-      const oldest = parseFloat(output[output.length-1]?.stck_clpr);
+      const latest = parseFloat(output[0].stck_clpr);
+      const oldest = parseFloat(output[output.length-1].stck_clpr);
       return oldest > 0 ? ((latest - oldest) / oldest) * 100 : null;
     } catch { return null; }
   };
