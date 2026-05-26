@@ -406,6 +406,11 @@ td.zero { color: var(--zero); }
   white-space: nowrap;
   flex-shrink: 0;
 }
+.legend-acc {
+  color: var(--text3, #7a8ba8);
+  font-size: 0.68rem;
+  margin-left: 2px;
+}
 .legend-pct {
   font-family: 'Space Mono', monospace;
   color: var(--text);

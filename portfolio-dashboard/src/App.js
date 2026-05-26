@@ -875,16 +875,31 @@ export default function App() {
   const totalProfitRate = totalPrincipal > 0 ? (totalProfit / totalPrincipal) * 100 : 0;
 
   // 비중 차트는 종목코드 기준으로 합산 (같은 종목이 여러 계좌에 있어도 하나로)
+  // 보유 계좌 목록도 함께 집계해 범례 금액 옆에 표시: (종합+ISA), (3계좌), (연금만)
+  const ACCOUNT_SHORT = { '종합계좌': '종합', '연금계좌': '연금', 'ISA계좌': 'ISA' };
+  const ACCOUNT_SORT = ['종합', '연금', 'ISA'];
+  const stripAccountSuffix = (name) => name.replace(/\s*\((?:ISA|연금|종합)\)\s*$/, '').trim();
+
   const pieData = Object.values(
     enriched
       .filter(h => h.evalAmount > 0)
       .reduce((acc, h) => {
-        if (!acc[h.code]) acc[h.code] = { code: h.code, name: h.name, value: 0 };
+        const accShort = ACCOUNT_SHORT[getAccountType(h.name)];
+        if (!acc[h.code]) {
+          acc[h.code] = { code: h.code, name: stripAccountSuffix(h.name), value: 0, accounts: new Set() };
+        }
         acc[h.code].value += h.evalAmount;
+        acc[h.code].accounts.add(accShort);
         return acc;
       }, {})
   )
-    .map(d => ({ ...d, pct: totalEval > 0 ? (d.value / totalEval) * 100 : 0 }))
+    .map(d => {
+      const accList = [...d.accounts].sort((a, b) => ACCOUNT_SORT.indexOf(a) - ACCOUNT_SORT.indexOf(b));
+      const accountLabel = accList.length === 3 ? '3계좌'
+        : accList.length === 1 ? `${accList[0]}만`
+        : accList.join('+');
+      return { ...d, accountLabel, pct: totalEval > 0 ? (d.value / totalEval) * 100 : 0 };
+    })
     .sort((a, b) => b.value - a.value);
 
   const marketOpen = isMarketOpen();
@@ -1137,7 +1152,9 @@ export default function App() {
                   <div key={idx} className="legend-item">
                     <span className="legend-dot" style={{ background: COLORS[idx % COLORS.length] }} />
                     <span className="legend-name">{d.name}</span>
-                    <span className="legend-value">{fmt(d.value)}원</span>
+                    <span className="legend-value">
+                      {fmt(d.value)}원 <span className="legend-acc">({d.accountLabel})</span>
+                    </span>
                     <span className="legend-pct">{d.pct.toFixed(1)}%</span>
                   </div>
                 ))}
