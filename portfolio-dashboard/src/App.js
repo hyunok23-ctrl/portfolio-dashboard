@@ -185,268 +185,6 @@ function AddStockModal({ onAdd, onClose }) {
 }
 
 
-// ─── 컴포넌트: 스크리너 모달 ──────────────────────────────
-function ScreenerModal({ onClose }) {
-  const [period, setPeriod] = useState('3');
-  const [market, setMarket] = useState('ALL');
-  const [sector, setSector] = useState('ALL');
-  const [maxPer, setMaxPer] = useState('15');
-  const [maxPbr, setMaxPbr] = useState('1.5');
-  const [minUnder, setMinUnder] = useState('5');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [newsLoading, setNewsLoading] = useState({});
-  const [newsData, setNewsData] = useState({});
-  const [expandedStock, setExpandedStock] = useState(null);
-  const [crawling, setCrawling] = useState(false);
-
-  const search = async () => {
-    setLoading(true);
-    setNewsData({});
-    setExpandedStock(null);
-    try {
-      const params = new URLSearchParams({ period, market, sector, maxPer, maxPbr, minUnderperform: minUnder });
-      const r = await fetch(`/api/screener?${params}`);
-      const d = await r.json();
-      setData(d);
-    } catch {}
-    setLoading(false);
-  };
-
-  const fetchNews = async (stock) => {
-    if (newsData[stock.code]) {
-      setExpandedStock(expandedStock === stock.code ? null : stock.code);
-      return;
-    }
-    setExpandedStock(stock.code);
-    setNewsLoading(p => ({ ...p, [stock.code]: true }));
-    try {
-      const r = await fetch(`/api/news?code=${stock.code}&name=${encodeURIComponent(stock.name)}`);
-      const d = await r.json();
-      setNewsData(p => ({ ...p, [stock.code]: d }));
-    } catch {}
-    setNewsLoading(p => ({ ...p, [stock.code]: false }));
-  };
-
-  const triggerCrawl = async () => {
-    setCrawling(true);
-    try {
-      await fetch('/api/crawl');
-      alert('데이터 수집을 시작했어요! 약 10~20분 후 검색해주세요.');
-    } catch {}
-    setCrawling(false);
-  };
-
-  const fmtChange = (n) => n === null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
-  const clsN = (n) => n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero';
-
-  const sentimentColor = (s) => {
-    if (s === '호재') return '#ff4747';
-    if (s === '악재') return '#4fc3f7';
-    return '#7a8ba8';
-  };
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="screener-modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span>📊 퀀트 스크리너</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-
-        <div className="screener-body">
-          {/* 필터 영역 */}
-          <div className="screener-filters">
-            <div className="filter-group">
-              <label>기간</label>
-              <div className="filter-tabs">
-                {['1','3','6','12'].map(p => (
-                  <button key={p} className={`filter-tab ${period === p ? 'active' : ''}`}
-                    onClick={() => setPeriod(p)}>{p}개월</button>
-                ))}
-              </div>
-            </div>
-            <div className="filter-group">
-              <label>시장</label>
-              <div className="filter-tabs">
-                {['ALL','KOSPI','KOSDAQ'].map(m => (
-                  <button key={m} className={`filter-tab ${market === m ? 'active' : ''}`}
-                    onClick={() => setMarket(m)}>{m === 'ALL' ? '전체' : m}</button>
-                ))}
-              </div>
-            </div>
-            <div className="filter-row">
-              <div className="filter-group">
-                <label>PER 상한</label>
-                <input className="filter-input" type="number" value={maxPer}
-                  onChange={e => setMaxPer(e.target.value)} step="1" min="1" />
-              </div>
-              <div className="filter-group">
-                <label>PBR 상한</label>
-                <input className="filter-input" type="number" value={maxPbr}
-                  onChange={e => setMaxPbr(e.target.value)} step="0.1" min="0.1" />
-              </div>
-              <div className="filter-group">
-                <label>지수대비 하회 최소</label>
-                <input className="filter-input" type="number" value={minUnder}
-                  onChange={e => setMinUnder(e.target.value)} step="1" min="0" />
-              </div>
-            </div>
-            {data?.sectors && (
-              <div className="filter-group">
-                <label>섹터</label>
-                <select className="filter-select" value={sector} onChange={e => setSector(e.target.value)}>
-                  <option value="ALL">전체 섹터</option>
-                  {data.sectors.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="screener-actions">
-              <button className="btn-screener-search" onClick={search} disabled={loading}>
-                {loading ? '검색 중...' : '🔍 검색'}
-              </button>
-              <button className="btn-screener-crawl" onClick={triggerCrawl} disabled={crawling}>
-                {crawling ? '수집 중...' : '🔄 데이터 갱신'}
-              </button>
-            </div>
-          </div>
-
-          {/* 결과 영역 */}
-          {!data && !loading && (
-            <div className="screener-empty">
-              <div>조건을 설정하고 검색해주세요</div>
-              <div className="screener-empty-sub">데이터가 없으면 "데이터 갱신" 버튼을 먼저 눌러주세요</div>
-            </div>
-          )}
-
-          {data && !data.ready && (
-            <div className="screener-empty">
-              <div>⏳ {data.message}</div>
-              <button className="btn-screener-crawl" style={{marginTop:12}} onClick={triggerCrawl}>
-                🔄 지금 수집 시작
-              </button>
-            </div>
-          )}
-
-          {data?.ready && (
-            <div className="screener-results">
-              <div className="screener-result-header">
-                <span>총 <b>{data.total}</b>개 종목 발견</span>
-                {data.updated && <span className="screener-updated">기준: {new Date(data.updated).toLocaleDateString('ko-KR')}</span>}
-                {data.indexChanges && (
-                  <span className="screener-index">
-                    {period}개월 지수: KOSPI <b className={clsN(data.indexChanges.KOSPI)}>{fmtChange(data.indexChanges.KOSPI)}</b>
-                    {' / '}KOSDAQ <b className={clsN(data.indexChanges.KOSDAQ)}>{fmtChange(data.indexChanges.KOSDAQ)}</b>
-                  </span>
-                )}
-              </div>
-
-              {data.stocks.length === 0 ? (
-                <div className="screener-empty">조건에 맞는 종목이 없어요. 필터를 조정해보세요.</div>
-              ) : (
-                <div className="screener-table-wrap">
-                  <table className="screener-table">
-                    <thead>
-                      <tr>
-                        <th>종목</th>
-                        <th>시장</th>
-                        <th>섹터</th>
-                        <th className="num">PER</th>
-                        <th className="num">PBR</th>
-                        <th className="num">종목등락</th>
-                        <th className="num">지수등락</th>
-                        <th className="num">하회율</th>
-                        <th>뉴스/AI</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.stocks.map(s => (
-                        <>
-                          <tr key={s.code} className="screener-row">
-                            <td>
-                              <div className="screener-name">{s.name}</div>
-                              <div className="screener-code">{s.code}</div>
-                            </td>
-                            <td><span className={`market-badge ${s.market.toLowerCase()}`}>{s.market}</span></td>
-                            <td className="screener-sector">{s.sector}</td>
-                            <td className="num">{s.per?.toFixed(1) ?? '—'}</td>
-                            <td className="num">{s.pbr?.toFixed(2) ?? '—'}</td>
-                            <td className={`num ${clsN(s.stockChange)}`}>{fmtChange(s.stockChange)}</td>
-                            <td className={`num ${clsN(s.indexChange)}`}>{fmtChange(s.indexChange)}</td>
-                            <td className="num neg"><b>{fmtChange(s.underperform)}</b></td>
-                            <td>
-                              <button className="btn-news"
-                                onClick={() => fetchNews(s)}
-                                disabled={newsLoading[s.code]}>
-                                {newsLoading[s.code] ? '...' : newsData[s.code] ? (expandedStock === s.code ? '접기' : '펼치기') : 'AI 분석'}
-                              </button>
-                            </td>
-                          </tr>
-                          {expandedStock === s.code && newsData[s.code] && (
-                            <tr key={`${s.code}-news`} className="news-expand-row">
-                              <td colSpan="9">
-                                <div className="news-expand">
-                                  {newsData[s.code].analysis && (
-                                    <div className="ai-analysis">
-                                      <div className="ai-header">
-                                        <span className="ai-label">AI 분석</span>
-                                        <span className="ai-sentiment"
-                                          style={{color: sentimentColor(newsData[s.code].analysis.sentiment)}}>
-                                          {newsData[s.code].analysis.sentiment}
-                                        </span>
-                                        <span className="ai-score">점수 {newsData[s.code].analysis.score}/10</span>
-                                      </div>
-                                      <div className="ai-summary">{newsData[s.code].analysis.summary}</div>
-                                      <div className="ai-points">
-                                        {newsData[s.code].analysis.positives?.length > 0 && (
-                                          <div className="ai-positives">
-                                            {newsData[s.code].analysis.positives.map((p, i) => (
-                                              <span key={i} className="ai-point pos">▲ {p}</span>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {newsData[s.code].analysis.negatives?.length > 0 && (
-                                          <div className="ai-negatives">
-                                            {newsData[s.code].analysis.negatives.map((n, i) => (
-                                              <span key={i} className="ai-point neg">▼ {n}</span>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                      {newsData[s.code].analysis.keywords?.length > 0 && (
-                                        <div className="ai-keywords">
-                                          {newsData[s.code].analysis.keywords.map((k, i) => (
-                                            <span key={i} className="ai-keyword">#{k}</span>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  <div className="news-list">
-                                    {newsData[s.code].news?.map((n, i) => (
-                                      <div key={i} className="news-item">
-                                        <span className="news-date">{n.date}</span>
-                                        <span className="news-title">{n.title}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── 컴포넌트: 종목 상세 모달 (캔들 + 투자자동향) ────────
 const PERIODS = [
@@ -736,28 +474,33 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showScreener, setShowScreener] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editVal, setEditVal] = useState({});
   const [selectedStock, setSelectedStock] = useState(null);
   const intervalRef = useRef(null);
 
-  // 서버에서 데이터 불러오기
+  // 서버에서 데이터 불러오기 (실패 시 localStorage fallback)
   useEffect(() => {
+    const loadFromLocal = () => {
+      try {
+        const local = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (Array.isArray(local) && local.length > 0) setHoldings(local);
+      } catch {}
+      setDataLoaded(true);
+    };
     fetch('/api/holdings')
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setHoldings(data);
-        setDataLoaded(true);
+        if (Array.isArray(data)) {
+          // API 성공: 서버 데이터 우선 사용
+          setHoldings(data);
+          setDataLoaded(true);
+        } else {
+          // API가 에러 객체 반환 → localStorage fallback
+          loadFromLocal();
+        }
       })
-      .catch(() => {
-        // 실패시 로컬스토리지 fallback
-        try {
-          const local = JSON.parse(localStorage.getItem(STORAGE_KEY));
-          if (local) setHoldings(local);
-        } catch {}
-        setDataLoaded(true);
-      });
+      .catch(loadFromLocal);
   }, []);
 
   // 서버에 데이터 저장 (빈 배열은 저장 안 함)
@@ -928,9 +671,6 @@ export default function App() {
             </button>
             <button className="btn-secondary" onClick={() => setShowHistory(true)}>
               <span className="btn-icon">📈</span><span className="btn-text"> 이력</span>
-            </button>
-            <button className="btn-secondary" onClick={() => setShowScreener(true)}>
-              <span className="btn-icon">📊</span><span className="btn-text"> 스크리너</span>
             </button>
             <button className="btn-primary" onClick={() => setShowModal(true)}>
               <span className="btn-icon">+</span><span className="btn-text"> 종목 추가</span>
@@ -1167,10 +907,6 @@ export default function App() {
       {/* 모달 */}
       {selectedStock && (
         <StockDetailModal stock={selectedStock} onClose={() => setSelectedStock(null)} />
-      )}
-
-      {showScreener && (
-        <ScreenerModal onClose={() => setShowScreener(false)} />
       )}
 
       {showHistory && snapshots.length > 0 && (
