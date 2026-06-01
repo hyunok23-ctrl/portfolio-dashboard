@@ -369,8 +369,18 @@ function StockDetailModal({ stock, onClose }) {
 }
 
 // ─── 컴포넌트: 히스토리 차트 ───────────────────────────
+const CSV_PERIODS = [
+  { label: '1주',   days: 7 },
+  { label: '1개월', days: 30 },
+  { label: '3개월', days: 90 },
+  { label: '6개월', days: 180 },
+  { label: '1년',   days: 365 },
+  { label: '전체',  days: null },
+];
+
 function HistoryChart({ snapshots, onClose }) {
   const [selected, setSelected] = useState(null);
+  const [csvPeriod, setCsvPeriod] = useState('7'); // 디폴트 1주
 
   // 주말(토/일) 스냅샷 제외
   const isWeekend = (dateStr) => {
@@ -398,7 +408,13 @@ function HistoryChart({ snapshots, onClose }) {
   };
 
   const downloadCSV = () => {
-    const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+    const days = csvPeriod === 'all' ? null : parseInt(csvPeriod);
+    const cutoff = days
+      ? new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      : null;
+    const sorted = [...snapshots]
+      .filter(s => !cutoff || s.date >= cutoff)
+      .sort((a, b) => a.date.localeCompare(b.date));
     const rows = [];
 
     // ① 일별 요약
@@ -442,7 +458,8 @@ function HistoryChart({ snapshots, onClose }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `portfolio_${new Date().toISOString().slice(0,10)}.csv`;
+    const periodLabel = CSV_PERIODS.find(p => String(p.days ?? 'all') === csvPeriod)?.label || csvPeriod;
+    a.download = `portfolio_${periodLabel}_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -452,8 +469,17 @@ function HistoryChart({ snapshots, onClose }) {
       <div className="history-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>📈 평가금액 이력</span>
-          <div style={{display:'flex', gap:8, alignItems:'center'}}>
-            <button className="btn-download-csv" onClick={downloadCSV} title="전체 데이터 CSV 다운로드">
+          <div style={{display:'flex', gap:6, alignItems:'center'}}>
+            <select
+              className="csv-period-select"
+              value={csvPeriod}
+              onChange={e => setCsvPeriod(e.target.value)}
+            >
+              {CSV_PERIODS.map(p => (
+                <option key={p.label} value={String(p.days ?? 'all')}>{p.label}</option>
+              ))}
+            </select>
+            <button className="btn-download-csv" onClick={downloadCSV}>
               ⬇ CSV
             </button>
             <button className="modal-close" onClick={onClose}>✕</button>

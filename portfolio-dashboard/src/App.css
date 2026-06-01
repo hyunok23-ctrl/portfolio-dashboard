@@ -488,6 +488,19 @@ td.zero { color: var(--zero); }
 }
 .modal-close:hover { color: var(--text); }
 
+.csv-period-select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.csv-period-select:focus { border-color: var(--accent); }
+
 .btn-download-csv {
   background: var(--surface2);
   border: 1px solid var(--border2);
@@ -499,6 +512,7 @@ td.zero { color: var(--zero); }
   cursor: pointer;
   transition: all 0.15s;
   font-family: 'Noto Sans KR', sans-serif;
+  white-space: nowrap;
 }
 .btn-download-csv:hover { border-color: var(--accent); color: var(--accent); }
 
