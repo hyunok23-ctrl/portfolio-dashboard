@@ -369,18 +369,32 @@ function StockDetailModal({ stock, onClose }) {
 }
 
 // ─── 컴포넌트: 히스토리 차트 ───────────────────────────
+// value: 'w1'=1주, 'm1'=1개월, ... , 'all'=전체
 const CSV_PERIODS = [
-  { label: '1주',   days: 7 },
-  { label: '1개월', days: 30 },
-  { label: '3개월', days: 90 },
-  { label: '6개월', days: 180 },
-  { label: '1년',   days: 365 },
-  { label: '전체',  days: null },
+  { label: '전체',  value: 'all' },
+  { label: '1년',   value: 'y1' },
+  { label: '6개월', value: 'm6' },
+  { label: '3개월', value: 'm3' },
+  { label: '1개월', value: 'm1' },
+  { label: '1주',   value: 'w1' },
 ];
+
+const getCutoffDate = (period) => {
+  if (period === 'all') return null;
+  const now = new Date();
+  if (period === 'w1') { now.setDate(now.getDate() - 7); }
+  else if (period === 'm1') { now.setMonth(now.getMonth() - 1); }
+  else if (period === 'm3') { now.setMonth(now.getMonth() - 3); }
+  else if (period === 'm6') { now.setMonth(now.getMonth() - 6); }
+  else if (period === 'y1') { now.setFullYear(now.getFullYear() - 1); }
+  // KST 기준 날짜 문자열 반환
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+};
 
 function HistoryChart({ snapshots, onClose }) {
   const [selected, setSelected] = useState(null);
-  const [csvPeriod, setCsvPeriod] = useState('7'); // 디폴트 1주
+  const [csvPeriod, setCsvPeriod] = useState('all'); // 디폴트 전체
 
   // 주말(토/일) 스냅샷 제외
   const isWeekend = (dateStr) => {
@@ -408,10 +422,7 @@ function HistoryChart({ snapshots, onClose }) {
   };
 
   const downloadCSV = () => {
-    const days = csvPeriod === 'all' ? null : parseInt(csvPeriod);
-    const cutoff = days
-      ? new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-      : null;
+    const cutoff = getCutoffDate(csvPeriod);
     const sorted = [...snapshots]
       .filter(s => !cutoff || s.date >= cutoff)
       .sort((a, b) => a.date.localeCompare(b.date));
@@ -458,8 +469,9 @@ function HistoryChart({ snapshots, onClose }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const periodLabel = CSV_PERIODS.find(p => String(p.days ?? 'all') === csvPeriod)?.label || csvPeriod;
-    a.download = `portfolio_${periodLabel}_${new Date().toISOString().slice(0,10)}.csv`;
+    const periodLabel = CSV_PERIODS.find(p => p.value === csvPeriod)?.label || csvPeriod;
+    const todayKST = new Date(Date.now() + 9*60*60*1000).toISOString().slice(0,10);
+    a.download = `portfolio_${periodLabel}_${todayKST}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -476,7 +488,7 @@ function HistoryChart({ snapshots, onClose }) {
               onChange={e => setCsvPeriod(e.target.value)}
             >
               {CSV_PERIODS.map(p => (
-                <option key={p.label} value={String(p.days ?? 'all')}>{p.label}</option>
+                <option key={p.value} value={p.value}>{p.label}</option>
               ))}
             </select>
             <button className="btn-download-csv" onClick={downloadCSV}>
