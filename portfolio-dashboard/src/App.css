@@ -488,6 +488,20 @@ td.zero { color: var(--zero); }
 }
 .modal-close:hover { color: var(--text); }
 
+.btn-download-csv {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.btn-download-csv:hover { border-color: var(--accent); color: var(--accent); }
+
 .modal-body {
   padding: 24px;
   display: flex;

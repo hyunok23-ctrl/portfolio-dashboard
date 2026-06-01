@@ -397,12 +397,67 @@ function HistoryChart({ snapshots, onClose }) {
     setSelected(snap || null);
   };
 
+  const downloadCSV = () => {
+    const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+    const rows = [];
+
+    // ① 일별 요약
+    rows.push(['[일별 요약]']);
+    rows.push(['날짜', '투자원금', '평가금액', '손익', '수익률(%)']);
+    sorted.forEach(s => {
+      rows.push([
+        s.date,
+        s.totalPrincipal,
+        s.totalEval,
+        s.totalProfit,
+        s.totalProfitRate?.toFixed(2) ?? '',
+      ]);
+    });
+
+    rows.push([]); // 빈 줄 구분
+
+    // ② 종목별 상세
+    rows.push(['[종목별 상세]']);
+    rows.push(['날짜', '종목명', '코드', '수량', '현재가', '평균단가', '원금', '평가금액', '손익', '수익률(%)']);
+    sorted.forEach(s => {
+      (s.holdings || []).forEach(h => {
+        rows.push([
+          s.date,
+          h.name,
+          h.code,
+          h.qty,
+          h.currentPrice,
+          h.avgPrice,
+          h.principal,
+          h.evalAmount,
+          h.profit,
+          h.profitRate?.toFixed(2) ?? '',
+        ]);
+      });
+    });
+
+    // UTF-8 BOM + CSV 생성 (Excel 한글 깨짐 방지)
+    const csv = '﻿' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `portfolio_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="history-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>📈 평가금액 이력</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <div style={{display:'flex', gap:8, alignItems:'center'}}>
+            <button className="btn-download-csv" onClick={downloadCSV} title="전체 데이터 CSV 다운로드">
+              ⬇ CSV
+            </button>
+            <button className="modal-close" onClick={onClose}>✕</button>
+          </div>
         </div>
         <div className="history-body">
           <div className="history-chart-wrap">
