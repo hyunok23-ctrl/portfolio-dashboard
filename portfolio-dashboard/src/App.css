@@ -1413,6 +1413,10 @@ td.zero { color: var(--zero); }
 }
 .code-summary-table tbody tr:last-child td { border-bottom: none; }
 .code-summary-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+/* 손익/수익률 컬러: td.pos/neg보다 구체적으로 지정 */
+.code-summary-table td.pos { color: var(--pos); }
+.code-summary-table td.neg { color: var(--neg); }
+.code-summary-table td.zero { color: var(--zero); }
 .code-summary-total td {
   background: var(--surface2);
   border-top: 1px solid var(--border2);
