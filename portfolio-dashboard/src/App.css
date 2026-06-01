@@ -680,6 +680,7 @@ td.zero { color: var(--zero); }
     display: flex;
     flex-direction: column;
     gap: 12px;
+    align-items: stretch;   /* 데스크톱 align-items:start 덮어씀 */
   }
   .chart-section  { order: 1; padding: 14px 10px; }
   .table-section  { order: 2; padding: 14px 10px; }
