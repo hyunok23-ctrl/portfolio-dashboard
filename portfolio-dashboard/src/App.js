@@ -643,9 +643,10 @@ export default function App() {
       .reduce((acc, h) => {
         const accShort = ACCOUNT_SHORT[getAccountType(h.name)];
         if (!acc[h.code]) {
-          acc[h.code] = { code: h.code, name: stripAccountSuffix(h.name), value: 0, accounts: new Set() };
+          acc[h.code] = { code: h.code, name: stripAccountSuffix(h.name), value: 0, qty: 0, accounts: new Set() };
         }
         acc[h.code].value += h.evalAmount;
+        acc[h.code].qty   += h.qty;
         acc[h.code].accounts.add(accShort);
         return acc;
       }, {})
@@ -923,7 +924,10 @@ export default function App() {
                 {pieData.map((d, idx) => (
                   <div key={idx} className="legend-item">
                     <span className="legend-dot" style={{ background: COLORS[idx % COLORS.length] }} />
-                    <span className="legend-name">{d.name}</span>
+                    <span className="legend-name">
+                      {d.name}
+                      <span className="legend-qty">×{d.qty.toLocaleString()}</span>
+                    </span>
                     <span className="legend-value">
                       {fmt(d.value)}원 <span className="legend-acc">({d.accountLabel})</span>
                     </span>
