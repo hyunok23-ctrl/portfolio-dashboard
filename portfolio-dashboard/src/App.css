@@ -354,8 +354,6 @@ td.zero { color: var(--zero); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
-  position: sticky;
-  top: 84px;
 }
 
 .pie-container {
@@ -604,7 +602,7 @@ td.zero { color: var(--zero); }
 }
 @media (max-width: 1024px) {
   .content-grid { grid-template-columns: 1fr; }
-  .chart-section { position: static; }
+  .chart-section { }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
