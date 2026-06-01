@@ -1024,8 +1024,7 @@ export default function App() {
                       <span className="legend-qty">×{d.qty.toLocaleString()}</span>
                     </span>
                     <span className="legend-value">
-                      {fmt(d.value)}원 <span className="legend-acc">({d.accountLabel})</span>
-                      {d.avgPrice > 0 && <span className="legend-avg"> @{fmt(d.avgPrice)}</span>}
+                      {d.avgPrice > 0 ? fmt(d.avgPrice) : '—'}원 <span className="legend-acc">({d.accountLabel})</span>
                     </span>
                     <span className="legend-pct">{d.pct.toFixed(1)}%</span>
                   </div>

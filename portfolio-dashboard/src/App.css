@@ -402,7 +402,7 @@ td.zero { color: var(--zero); }
 }
 .legend-value {
   font-family: 'Noto Sans KR', sans-serif;
-  color: var(--text2);
+  color: var(--text);
   font-size: 0.72rem;
   font-weight: 500;
   white-space: nowrap;
