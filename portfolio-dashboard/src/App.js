@@ -736,10 +736,11 @@ export default function App() {
       .reduce((acc, h) => {
         const accShort = ACCOUNT_SHORT[getAccountType(h.name)];
         if (!acc[h.code]) {
-          acc[h.code] = { code: h.code, name: stripAccountSuffix(h.name), value: 0, qty: 0, accounts: new Set() };
+          acc[h.code] = { code: h.code, name: stripAccountSuffix(h.name), value: 0, qty: 0, principal: 0, accounts: new Set() };
         }
-        acc[h.code].value += h.evalAmount;
-        acc[h.code].qty   += h.qty;
+        acc[h.code].value     += h.evalAmount;
+        acc[h.code].qty       += h.qty;
+        acc[h.code].principal += h.principal;
         acc[h.code].accounts.add(accShort);
         return acc;
       }, {})
@@ -749,7 +750,8 @@ export default function App() {
       const accountLabel = accList.length === 3 ? '3계좌'
         : accList.length === 1 ? `${accList[0]}만`
         : accList.join('+');
-      return { ...d, accountLabel, pct: totalEval > 0 ? (d.value / totalEval) * 100 : 0 };
+      const avgPrice = d.qty > 0 ? Math.round(d.principal / d.qty) : 0;
+      return { ...d, accountLabel, avgPrice, pct: totalEval > 0 ? (d.value / totalEval) * 100 : 0 };
     })
     .sort((a, b) => b.value - a.value);
 
@@ -1023,6 +1025,7 @@ export default function App() {
                     </span>
                     <span className="legend-value">
                       {fmt(d.value)}원 <span className="legend-acc">({d.accountLabel})</span>
+                      {d.avgPrice > 0 && <span className="legend-avg"> @{fmt(d.avgPrice)}</span>}
                     </span>
                     <span className="legend-pct">{d.pct.toFixed(1)}%</span>
                   </div>

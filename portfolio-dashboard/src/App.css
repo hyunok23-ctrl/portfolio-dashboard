@@ -419,6 +419,12 @@ td.zero { color: var(--zero); }
   margin-left: 4px;
   white-space: nowrap;
 }
+.legend-avg {
+  color: var(--text3);
+  font-size: 0.65rem;
+  margin-left: 3px;
+  white-space: nowrap;
+}
 .legend-pct {
   font-family: 'Noto Sans KR', sans-serif;
   color: var(--text);
