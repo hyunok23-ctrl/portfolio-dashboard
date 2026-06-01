@@ -372,14 +372,23 @@ function StockDetailModal({ stock, onClose }) {
 function HistoryChart({ snapshots, onClose }) {
   const [selected, setSelected] = useState(null);
 
-  const chartData = snapshots.map(s => ({
-    date: s.date,
-    label: s.date.slice(5), // MM-DD
-    eval: s.totalEval,
-    principal: s.totalPrincipal,
-    profit: s.totalProfit,
-    rate: s.totalProfitRate,
-  })).reverse();
+  // 주말(토/일) 스냅샷 제외
+  const isWeekend = (dateStr) => {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    const day = d.getUTCDay();
+    return day === 0 || day === 6;
+  };
+
+  const chartData = snapshots
+    .filter(s => !isWeekend(s.date))
+    .map(s => ({
+      date: s.date,
+      label: s.date.slice(5), // MM-DD
+      eval: s.totalEval,
+      principal: s.totalPrincipal,
+      profit: s.totalProfit,
+      rate: s.totalProfitRate,
+    })).reverse();
 
   const handleClick = (data) => {
     if (!data?.activePayload) return;
