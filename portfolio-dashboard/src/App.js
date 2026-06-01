@@ -650,6 +650,24 @@ export default function App() {
     })
     .sort((a, b) => b.value - a.value);
 
+  // 종목코드 기준 원금/평가금액/손익/수익률 합산 (하단 요약 테이블용)
+  const codeData = Object.values(
+    enriched.reduce((acc, h) => {
+      if (!acc[h.code]) {
+        acc[h.code] = { code: h.code, name: stripAccountSuffix(h.name), principal: 0, evalAmount: 0 };
+      }
+      acc[h.code].principal  += h.principal;
+      acc[h.code].evalAmount += h.evalAmount;
+      return acc;
+    }, {})
+  )
+    .map(d => {
+      const profit     = d.evalAmount - d.principal;
+      const profitRate = d.principal > 0 ? (profit / d.principal) * 100 : 0;
+      return { ...d, profit, profitRate };
+    })
+    .sort((a, b) => b.evalAmount - a.evalAmount);
+
   const marketOpen = isMarketOpen();
 
   return (
@@ -907,6 +925,64 @@ export default function App() {
             </section>
           )}
         </div>
+
+        {/* 종목코드별 손익 요약 테이블 */}
+        {codeData.length > 0 && (
+          <section className="code-summary-section">
+            <div className="section-header">
+              <h2>종목별 손익 요약</h2>
+              <span className="section-sub">종목코드 기준 합산</span>
+            </div>
+            <div className="table-wrapper">
+              <table className="code-summary-table">
+                <thead>
+                  <tr>
+                    <th>종목</th>
+                    <th className="num">원금</th>
+                    <th className="num">평가금액</th>
+                    <th className="num">손익</th>
+                    <th className="num">수익률</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {codeData.map((d, i) => (
+                    <tr key={d.code}>
+                      <td>
+                        <div className="stock-name-cell">
+                          <span className="color-dot" style={{ background: COLORS[i % COLORS.length] }} />
+                          <div>
+                            <div className="stock-name">{d.name}</div>
+                            <div className="stock-code">{d.code}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="num">{fmt(d.principal)}</td>
+                      <td className="num">{d.evalAmount > 0 ? fmt(d.evalAmount) : '—'}</td>
+                      <td className={`num ${cls(d.profit)}`}>
+                        {d.evalAmount > 0 ? (d.profit >= 0 ? '+' : '') + fmt(d.profit) : '—'}
+                      </td>
+                      <td className={`num rate-cell ${cls(d.profitRate)}`}>
+                        {d.evalAmount > 0 ? fmtRate(d.profitRate) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* 합계 행 */}
+                  <tr className="code-summary-total">
+                    <td><span className="subtotal-label">합계</span></td>
+                    <td className="num">{fmt(totalPrincipal)}</td>
+                    <td className="num">{totalEval > 0 ? fmt(totalEval) : '—'}</td>
+                    <td className={`num ${cls(totalProfit)}`}>
+                      {totalEval > 0 ? (totalProfit >= 0 ? '+' : '') + fmt(totalProfit) : '—'}
+                    </td>
+                    <td className={`num rate-cell ${cls(totalProfitRate)}`}>
+                      {totalEval > 0 ? fmtRate(totalProfitRate) : '—'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* 모달 */}

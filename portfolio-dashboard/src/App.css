@@ -1358,3 +1358,46 @@ td.zero { color: var(--zero); }
   .news-expand { flex-direction: column; }
   .ai-analysis { max-width: 100%; }
 }
+
+/* ─── 종목별 손익 요약 테이블 ──────────────────────────── */
+.code-summary-section {
+  margin: 0 20px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.code-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.code-summary-table thead tr {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.code-summary-table th {
+  padding: 10px 16px;
+  color: var(--text2);
+  font-weight: 500;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.code-summary-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.code-summary-table tbody tr:last-child td { border-bottom: none; }
+.code-summary-table tbody tr:hover { background: var(--surface2); }
+.code-summary-total td {
+  background: var(--surface2);
+  border-top: 1px solid var(--border2);
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .code-summary-section { margin: 0 12px 24px; }
+  .code-summary-table th,
+  .code-summary-table td { padding: 8px 10px; font-size: 0.8rem; }
+}
