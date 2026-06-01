@@ -201,7 +201,7 @@ body {
 /* ─── 콘텐츠 그리드 ────────────────────────────────── */
 .content-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr 460px;
   gap: 20px;
   align-items: start;
 }
@@ -599,7 +599,10 @@ td.zero { color: var(--zero); }
 .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ─── 반응형 ─────────────────────────────────────────── */
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
+  .content-grid { grid-template-columns: 1fr 380px; }
+}
+@media (max-width: 1024px) {
   .content-grid { grid-template-columns: 1fr; }
   .chart-section { position: static; }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1359,39 +1362,41 @@ td.zero { color: var(--zero); }
   .ai-analysis { max-width: 100%; }
 }
 
-/* ─── 종목별 손익 요약 (chart-section 내 compact) ─────── */
+/* ─── 종목별 손익 요약 (chart-section 내) ─────────────── */
 .code-summary-wrap {
-  margin-top: 16px;
+  margin-top: 18px;
   border-top: 1px solid var(--border);
-  padding-top: 12px;
+  padding-top: 14px;
 }
 .code-summary-title {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 700;
   color: var(--text);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .code-summary-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
 }
 .code-summary-table thead tr {
   border-bottom: 1px solid var(--border);
 }
 .code-summary-table th {
-  padding: 5px 6px;
+  padding: 6px 8px;
   color: var(--text3);
   font-weight: 500;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 .code-summary-table td {
-  padding: 6px 6px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   white-space: nowrap;
@@ -1399,14 +1404,13 @@ td.zero { color: var(--zero); }
 .code-summary-table td:first-child {
   display: flex;
   align-items: center;
-  gap: 5px;
-  max-width: 110px;
+  gap: 6px;
 }
 .cs-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 90px;
+  max-width: 130px;
   display: inline-block;
 }
 .code-summary-table tbody tr:last-child td { border-bottom: none; }
@@ -1416,4 +1420,9 @@ td.zero { color: var(--zero); }
   border-top: 1px solid var(--border2);
   border-bottom: none;
   font-weight: 600;
+}
+
+/* 모바일: 우측 패널이 아래로 내려올 때 full width */
+@media (max-width: 1024px) {
+  .cs-name { max-width: 160px; }
 }
