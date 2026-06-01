@@ -1502,11 +1502,30 @@ td.zero { color: var(--zero); }
     width: 100%;
   }
   .code-summary-table th:nth-child(1),
-  .code-summary-table td:nth-child(1) { width: 44%; }   /* 종목 */
+  .code-summary-table td:nth-child(1) { width: 48%; }   /* 종목 */
   .code-summary-table th:nth-child(3),
-  .code-summary-table td:nth-child(3) { width: 23%; }   /* 평가금액 */
+  .code-summary-table td:nth-child(3) { width: 22%; }   /* 평가금액 */
   .code-summary-table th:nth-child(4),
-  .code-summary-table td:nth-child(4) { width: 20%; }   /* 손익 */
+  .code-summary-table td:nth-child(4) { width: 18%; }   /* 손익 */
   .code-summary-table th:nth-child(5),
-  .code-summary-table td:nth-child(5) { width: 13%; }   /* 수익률 */
+  .code-summary-table td:nth-child(5) { width: 12%; }   /* 수익률 */
+
+  /* td:first-child flex가 table-layout과 충돌 → 인라인 처리로 변경 */
+  .code-summary-table td:first-child {
+    display: table-cell;
+    vertical-align: middle;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .code-summary-table td:first-child .color-dot {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 5px;
+    flex-shrink: 0;
+  }
+  .code-summary-table td:first-child .cs-name {
+    display: inline;
+    vertical-align: middle;
+  }
 }
