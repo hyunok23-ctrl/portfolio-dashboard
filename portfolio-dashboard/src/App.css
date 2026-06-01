@@ -109,7 +109,7 @@ body {
   50% { opacity: 0.3; }
 }
 
-.last-updated { font-size: 0.75rem; color: var(--text3); font-family: 'Space Mono', monospace; }
+.last-updated { font-size: 0.75rem; color: var(--text3); font-family: 'Noto Sans KR', sans-serif; }
 
 .btn-refresh {
   width: 36px; height: 36px;
@@ -178,7 +178,7 @@ body {
   margin-bottom: 10px;
 }
 .summary-value {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text);
@@ -192,7 +192,7 @@ body {
 .summary-rate {
   margin-top: 6px;
   font-size: 0.8rem;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 .summary-rate.pos { color: var(--pos); }
 .summary-rate.neg { color: var(--neg); }
@@ -257,7 +257,7 @@ body {
   vertical-align: middle;
   white-space: nowrap;
 }
-.stock-table td.num { text-align: right; font-family: 'Space Mono', monospace; }
+.stock-table td.num { text-align: right; font-family: 'Noto Sans KR', sans-serif; }
 
 .stock-table tr:last-child td { border-bottom: none; }
 .stock-table tbody tr {
@@ -331,7 +331,7 @@ td.zero { color: var(--zero); }
   color: var(--text);
   padding: 4px 8px;
   font-size: 0.8rem;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   text-align: right;
   outline: none;
 }
@@ -356,14 +356,7 @@ td.zero { color: var(--zero); }
   padding: 24px;
   position: sticky;
   top: 84px;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border2) transparent;
 }
-.chart-section::-webkit-scrollbar { width: 4px; }
-.chart-section::-webkit-scrollbar-track { background: transparent; }
-.chart-section::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
 .pie-container {
   position: relative;
@@ -377,7 +370,7 @@ td.zero { color: var(--zero); }
   pointer-events: none;
 }
 .pie-center-label { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
-.pie-center-value { font-family: 'Space Mono', monospace; font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 4px; }
+.pie-center-value { font-family: 'Noto Sans KR', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 4px; }
 .pie-center-unit { font-size: 0.7rem; color: var(--text2); }
 
 .pie-legend {
@@ -406,7 +399,7 @@ td.zero { color: var(--zero); }
   white-space: nowrap;
 }
 .legend-value {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   color: var(--text2);
   font-size: 0.72rem;
   font-weight: 500;
@@ -419,7 +412,7 @@ td.zero { color: var(--zero); }
   margin-left: 2px;
 }
 .legend-pct {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   color: var(--text);
   font-weight: 700;
   flex-shrink: 0;
@@ -436,8 +429,8 @@ td.zero { color: var(--zero); }
   font-size: 0.8rem;
 }
 .pie-tooltip-name { color: var(--text2); margin-bottom: 4px; }
-.pie-tooltip-value { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--accent); }
-.pie-tooltip-pct { font-family: 'Space Mono', monospace; color: var(--text2); font-size: 0.72rem; margin-top: 2px; }
+.pie-tooltip-value { font-family: 'Noto Sans KR', sans-serif; font-weight: 700; color: var(--accent); }
+.pie-tooltip-pct { font-family: 'Noto Sans KR', sans-serif; color: var(--text2); font-size: 0.72rem; margin-top: 2px; }
 
 /* ─── 모달 ──────────────────────────────────────────── */
 .modal-backdrop {
@@ -566,7 +559,7 @@ td.zero { color: var(--zero); }
   color: var(--text2);
 }
 .preview-value {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   font-weight: 700;
   color: var(--accent);
 }
@@ -611,7 +604,7 @@ td.zero { color: var(--zero); }
 }
 @media (max-width: 1024px) {
   .content-grid { grid-template-columns: 1fr; }
-  .chart-section { position: static; max-height: none; overflow-y: visible; }
+  .chart-section { position: static; }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
@@ -787,7 +780,7 @@ td.zero { color: var(--zero); }
 }
 
 .history-date {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 0.85rem;
   color: var(--text2);
 }
@@ -816,8 +809,8 @@ td.zero { color: var(--zero); }
 .history-holding-row:last-child { border-bottom: none; }
 
 .history-holding-name { color: var(--text2); flex: 1; }
-.history-holding-price { font-family: 'Space Mono', monospace; color: var(--text); width: 100px; text-align: right; }
-.history-holding-rate { font-family: 'Space Mono', monospace; font-weight: 700; width: 80px; text-align: right; }
+.history-holding-price { font-family: 'Noto Sans KR', sans-serif; color: var(--text); width: 100px; text-align: right; }
+.history-holding-rate { font-family: 'Noto Sans KR', sans-serif; font-weight: 700; width: 80px; text-align: right; }
 .history-holding-rate.pos { color: var(--pos); }
 .history-holding-rate.neg { color: var(--neg); }
 .history-holding-rate.zero { color: var(--zero); }
@@ -891,7 +884,7 @@ td.zero { color: var(--zero); }
 .detail-code {
   font-size: 0.75rem;
   color: var(--text3);
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 .detail-body {
@@ -998,7 +991,7 @@ td.zero { color: var(--zero); }
 }
 .investor-table td.num {
   text-align: right;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   font-weight: 600;
 }
 .investor-table tr:last-child td { border-bottom: none; }
@@ -1035,7 +1028,7 @@ td.zero { color: var(--zero); }
   box-shadow: var(--shadow);
 }
 .ct-label {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   color: var(--text3);
   font-size: 0.68rem;
   margin-bottom: 5px;
@@ -1130,7 +1123,7 @@ td.zero { color: var(--zero); }
   color: var(--text);
   padding: 5px 8px;
   font-size: 0.82rem;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   outline: none;
   transition: border-color 0.15s;
 }
@@ -1225,7 +1218,7 @@ td.zero { color: var(--zero); }
 }
 .screener-table td.num {
   text-align: right;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 .screener-row:hover { background: var(--surface2); }
 
@@ -1296,7 +1289,7 @@ td.zero { color: var(--zero); }
 .ai-score {
   font-size: 0.72rem;
   color: var(--text3);
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   margin-left: auto;
 }
 .ai-summary {
@@ -1342,7 +1335,7 @@ td.zero { color: var(--zero); }
 .news-date {
   color: var(--text3);
   white-space: nowrap;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 0.68rem;
   flex-shrink: 0;
 }
