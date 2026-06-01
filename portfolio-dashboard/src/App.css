@@ -1489,26 +1489,26 @@ td.zero { color: var(--zero); }
 
 /* 모바일: 종목별 손익 테이블 최적화 */
 @media (max-width: 768px) {
-  /* 원금 열 숨김 */
+  /* 원금·평가금액 열 숨김 → 종목·손익·수익률만 표시 */
   .code-summary-table th:nth-child(2),
-  .code-summary-table td:nth-child(2) { display: none; }
+  .code-summary-table td:nth-child(2),
+  .code-summary-table th:nth-child(3),
+  .code-summary-table td:nth-child(3) { display: none; }
 
   /* 종목명 말줄임: 열 너비 내에서 최대한 표시 */
   .cs-name { max-width: none; width: 100%; }
 
-  /* 테이블 전체 너비 고정 + 열 너비 비율 지정 */
+  /* 테이블 전체 너비 고정 + 열 너비 비율 (종목·손익·수익률 3컬럼) */
   .code-summary-table {
     table-layout: fixed;
     width: 100%;
   }
   .code-summary-table th:nth-child(1),
-  .code-summary-table td:nth-child(1) { width: 48%; }   /* 종목 */
-  .code-summary-table th:nth-child(3),
-  .code-summary-table td:nth-child(3) { width: 22%; }   /* 평가금액 */
+  .code-summary-table td:nth-child(1) { width: 55%; }   /* 종목 */
   .code-summary-table th:nth-child(4),
-  .code-summary-table td:nth-child(4) { width: 18%; }   /* 손익 */
+  .code-summary-table td:nth-child(4) { width: 28%; }   /* 손익 */
   .code-summary-table th:nth-child(5),
-  .code-summary-table td:nth-child(5) { width: 12%; }   /* 수익률 */
+  .code-summary-table td:nth-child(5) { width: 17%; }   /* 수익률 */
 
   /* td:first-child flex가 table-layout과 충돌 → 인라인 처리로 변경 */
   .code-summary-table td:first-child {
