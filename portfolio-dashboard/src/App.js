@@ -843,7 +843,7 @@ export default function App() {
                         )}
                         <td className="num" data-label="원금">{fmt(h.principal)}</td>
                         <td className="num" data-label="평가금액">{h.evalAmount > 0 ? fmt(h.evalAmount) : '—'}</td>
-                        <td className={`num ${cls(h.profit)}`}>
+                        <td className={`num ${cls(h.profit)}`} data-label="손익">
                           {h.evalAmount > 0 ? (h.profit >= 0 ? '+' : '') + fmt(h.profit) : '—'}
                         </td>
                         <td className={`num rate-cell ${cls(h.profitRate)}`} data-label="수익률">

@@ -656,55 +656,86 @@ td.zero { color: var(--zero); }
 
   /* 메인 */
   .main { padding: 10px 12px 40px; }
-  .content-grid { grid-template-columns: 1fr; gap: 12px; }
-  .table-section { padding: 14px 10px; }
+  /* 모바일: 종목비중 먼저, 보유종목 아래 */
+  .content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .chart-section  { order: 1; padding: 14px 10px; }
+  .table-section  { order: 2; padding: 14px 10px; }
   .section-header { margin-bottom: 10px; }
 
   /* 모바일 테이블 → 카드 형태 */
+  .stock-table { width: 100%; }
   .stock-table thead { display: none; }
   .stock-table tbody tr {
-    display: flex;
-    flex-direction: column;
-    padding: 12px 0;
+    display: block;
+    padding: 10px 0;
     border-bottom: 1px solid var(--border);
-    gap: 5px;
   }
   .stock-table tbody tr:last-child { border-bottom: none; }
+  /* 카드 내 각 행: label 왼쪽, 값 오른쪽 */
   .stock-table td {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 2px 0;
+    padding: 3px 2px;
     border-bottom: none;
-    font-size: 0.8rem;
-    text-align: left;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    color: var(--text);
   }
-  .stock-table td.num { text-align: left; }
+  .stock-table td.num { text-align: right; }
+  /* data-label 없는 td는 label 숨김 */
   .stock-table td::before {
     content: attr(data-label);
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    min-width: 58px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
   }
-  .stock-table td:first-child::before { content: ''; }
+  /* 종목명 셀: label 없음, 전체 너비 */
   .stock-table td:first-child {
-    padding-bottom: 6px;
+    display: block;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+  }
+  .stock-table td:first-child::before { display: none; }
+  /* 현재가 셀: label 없음 */
+  .stock-table td:nth-child(2)::before { display: none; }
+  /* 관리(수정/삭제) 셀: label 없음, 우측 정렬 */
+  .stock-table td:last-child { justify-content: flex-end; }
+  .stock-table td:last-child::before { display: none; }
+
+  /* pos/neg 색상 유지 */
+  .stock-table td.pos { color: var(--pos); }
+  .stock-table td.neg { color: var(--neg); }
+
+  /* 계좌 그룹 헤더·소계 */
+  .account-group-header td {
+    display: block !important;
+    padding: 10px 2px 4px;
+    border-bottom: none;
+    font-size: 0.75rem;
+  }
+  .account-group-header td::before { display: none; }
+  .account-subtotal {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    margin-top: 4px;
+  }
+  .account-subtotal td {
+    padding: 5px 6px;
+    font-size: 0.75rem;
+    color: var(--text2);
   }
 
-  /* 계좌 그룹 헤더 모바일 */
-  .account-group-header td { padding: 12px 0 4px; }
-  .account-subtotal td { padding: 8px 0; }
-
-  .stock-name { font-size: 0.88rem; }
-  .price-cell { align-items: flex-end; }
-  .action-btns { justify-content: flex-end; }
-
-  /* 파이차트 */
-  .chart-section { padding: 14px 10px; position: static; }
+  .stock-name { font-size: 0.9rem; }
+  .price-cell { justify-content: flex-end; }
+  .action-btns { justify-content: flex-end; margin-top: 4px; }
 
   /* 모달 */
   .modal { width: 95vw; margin: 0 auto; }
