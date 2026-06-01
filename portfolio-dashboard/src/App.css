@@ -1413,6 +1413,9 @@ td.zero { color: var(--zero); }
 }
 .code-summary-table tbody tr:last-child td { border-bottom: none; }
 .code-summary-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+/* 숫자 컬럼 우측 정렬 */
+.code-summary-table th.num,
+.code-summary-table td.num { text-align: right; }
 /* 손익/수익률 컬러: td.pos/neg보다 구체적으로 지정 */
 .code-summary-table td.pos { color: var(--pos); }
 .code-summary-table td.neg { color: var(--neg); }
