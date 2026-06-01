@@ -626,28 +626,30 @@ td.zero { color: var(--zero); }
   }
   .logo { font-size: 0.82rem; letter-spacing: 0.12em; }
   .last-updated { display: none; }
-  .header-right { gap: 6px; }
+
+  /* ── 헤더 우측: 컨테이너를 40px 고정 → 자식 버튼은 stretch로 맞춤 ── */
+  .header-right {
+    gap: 6px;
+    height: 40px !important;         /* 컨테이너 높이 고정 */
+    align-items: stretch !important;  /* 버튼들이 컨테이너에 꽉 차도록 */
+    overflow: hidden !important;      /* 40px 초과 절대 불가 */
+  }
 
   /* 버튼 텍스트 숨기고 아이콘만 */
   .btn-text { display: none; }
-  .btn-icon { font-size: 1.1rem; line-height: 1; }
 
-  /* 헤더 우측 버튼 3개 — UA 스타일 완전 제거 후 동일 크기 고정 */
+  /* 버튼 3개: UA 스타일 제거 + 너비만 40px 고정 (높이는 컨테이너 stretch) */
   .header-right .btn-primary,
   .header-right .btn-secondary,
   .header-right .btn-refresh {
     -webkit-appearance: none !important;
     appearance: none !important;
     width: 40px !important;
-    height: 40px !important;
     min-width: 40px !important;
-    min-height: 40px !important;
     max-width: 40px !important;
-    max-height: 40px !important;
+    height: auto !important;           /* stretch가 높이 결정 */
     padding: 0 !important;
     margin: 0 !important;
-    line-height: 1 !important;
-    font-size: 1.1rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -655,21 +657,13 @@ td.zero { color: var(--zero); }
     box-sizing: border-box !important;
     overflow: hidden !important;
     flex: 0 0 40px !important;
+    font-size: 1.1rem !important;
+    line-height: 1 !important;
     transform: none !important;
   }
   .header-right .btn-primary:hover,
   .header-right .btn-primary:active { transform: none !important; }
-  /* 아이콘 스팬도 고정 — 내부 콘텐츠가 버튼 높이 밀지 않도록 */
-  .header-right .btn-icon {
-    width: 22px !important;
-    height: 22px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.15rem !important;
-    line-height: 1 !important;
-    overflow: hidden !important;
-  }
+
   /* 장중 뱃지 */
   .market-status { font-size: 0.72rem; padding: 0 8px; height: 40px; display: flex; align-items: center; border-radius: 8px; }
 
