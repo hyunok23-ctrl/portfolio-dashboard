@@ -632,24 +632,45 @@ td.zero { color: var(--zero); }
   .btn-text { display: none; }
   .btn-icon { font-size: 1.1rem; line-height: 1; }
 
-  /* 헤더 우측 버튼 3개 완전 동일 크기 고정 */
+  /* 헤더 우측 버튼 3개 — UA 스타일 완전 제거 후 동일 크기 고정 */
   .header-right .btn-primary,
   .header-right .btn-secondary,
   .header-right .btn-refresh {
+    -webkit-appearance: none !important;
+    appearance: none !important;
     width: 40px !important;
     height: 40px !important;
     min-width: 40px !important;
     min-height: 40px !important;
+    max-width: 40px !important;
     max-height: 40px !important;
     padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+    font-size: 1.1rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     border-radius: 8px !important;
     box-sizing: border-box !important;
-    flex-shrink: 0;
+    overflow: hidden !important;
+    flex: 0 0 40px !important;
+    transform: none !important;
   }
-  /* 장중 뱃지도 같은 높이 */
+  .header-right .btn-primary:hover,
+  .header-right .btn-primary:active { transform: none !important; }
+  /* 아이콘 스팬도 고정 — 내부 콘텐츠가 버튼 높이 밀지 않도록 */
+  .header-right .btn-icon {
+    width: 22px !important;
+    height: 22px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+  }
+  /* 장중 뱃지 */
   .market-status { font-size: 0.72rem; padding: 0 8px; height: 40px; display: flex; align-items: center; border-radius: 8px; }
 
   /* 요약카드 */

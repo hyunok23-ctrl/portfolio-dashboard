@@ -698,13 +698,13 @@ export default function App() {
                 {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 업데이트
               </span>
             )}
-            <button className={`btn-refresh ${loading ? 'spinning' : ''}`} onClick={fetchPrices} disabled={loading}>
+            <button className={`btn-refresh ${loading ? 'spinning' : ''}`} onClick={fetchPrices} disabled={loading} style={{flexShrink:0}}>
               ↻
             </button>
-            <button className="btn-secondary" onClick={() => setShowHistory(true)}>
+            <button className="btn-secondary" onClick={() => setShowHistory(true)} style={{flexShrink:0}}>
               <span className="btn-icon">📈</span><span className="btn-text"> 이력</span>
             </button>
-            <button className="btn-primary" onClick={() => setShowModal(true)}>
+            <button className="btn-primary" onClick={() => setShowModal(true)} style={{flexShrink:0, transform:'none'}}>
               <span className="btn-icon">+</span><span className="btn-text"> 종목 추가</span>
             </button>
           </div>
