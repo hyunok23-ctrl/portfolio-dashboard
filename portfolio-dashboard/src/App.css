@@ -1502,11 +1502,11 @@ td.zero { color: var(--zero); }
     width: 100%;
   }
   .code-summary-table th:nth-child(1),
-  .code-summary-table td:nth-child(1) { width: 38%; }   /* 종목 */
+  .code-summary-table td:nth-child(1) { width: 44%; }   /* 종목 */
   .code-summary-table th:nth-child(3),
-  .code-summary-table td:nth-child(3) { width: 27%; }   /* 평가금액 */
+  .code-summary-table td:nth-child(3) { width: 23%; }   /* 평가금액 */
   .code-summary-table th:nth-child(4),
-  .code-summary-table td:nth-child(4) { width: 22%; }   /* 손익 */
+  .code-summary-table td:nth-child(4) { width: 20%; }   /* 손익 */
   .code-summary-table th:nth-child(5),
   .code-summary-table td:nth-child(5) { width: 13%; }   /* 수익률 */
 }
