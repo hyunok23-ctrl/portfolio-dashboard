@@ -1493,8 +1493,8 @@ td.zero { color: var(--zero); }
   .code-summary-table th:nth-child(2),
   .code-summary-table td:nth-child(2) { display: none; }
 
-  /* 종목명 말줄임 */
-  .cs-name { max-width: 80px; }
+  /* 종목명 말줄임: 열 너비 내에서 최대한 표시 */
+  .cs-name { max-width: none; width: 100%; }
 
   /* 테이블 전체 너비 고정 + 열 너비 비율 지정 */
   .code-summary-table {
