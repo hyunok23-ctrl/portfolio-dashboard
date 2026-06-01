@@ -1486,3 +1486,11 @@ td.zero { color: var(--zero); }
 @media (max-width: 1024px) {
   .cs-name { max-width: 160px; }
 }
+
+/* 모바일: 종목별 손익 테이블 원금 열 숨김 (화면 너비 부족) */
+@media (max-width: 768px) {
+  .code-summary-table th:nth-child(2),
+  .code-summary-table td:nth-child(2) {
+    display: none;
+  }
+}
