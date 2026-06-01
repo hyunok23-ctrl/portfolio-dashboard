@@ -376,6 +376,7 @@ function HistoryChart({ snapshots, onClose }) {
     date: s.date,
     label: s.date.slice(5), // MM-DD
     eval: s.totalEval,
+    principal: s.totalPrincipal,
     profit: s.totalProfit,
     rate: s.totalProfitRate,
   })).reverse();
@@ -410,11 +411,13 @@ function HistoryChart({ snapshots, onClose }) {
                   labelStyle={{color:'#7a8ba8'}}
                   formatter={(v, n) => {
                     if (n === 'eval') return [fmt(v) + '원', '평가금액'];
+                    if (n === 'principal') return [<span style={{color:'#ff8a65'}}>{fmt(v) + '원'}</span>, '투자원금'];
                     const color = v >= 0 ? '#ff4747' : '#4fc3f7';
                     return [<span style={{color}}>{(v >= 0 ? '+' : '') + fmt(v) + '원'}</span>, '손익'];
                   }}
                 />
                 <Line type="monotone" dataKey="eval" stroke="#00d4aa" strokeWidth={2} dot={{r:3, fill:'#00d4aa'}} activeDot={{r:5}} name="eval" />
+                <Line type="monotone" dataKey="principal" stroke="#ff8a65" strokeWidth={1.5} dot={{r:2, fill:'#ff8a65'}} strokeDasharray="3 2" name="principal" />
                 <Line type="monotone" dataKey="profit" stroke="#4fc3f7" strokeWidth={1.5} dot={{r:2, fill:'#4fc3f7'}} strokeDasharray="4 2" name="profit" />
               </LineChart>
             </ResponsiveContainer>
@@ -425,6 +428,7 @@ function HistoryChart({ snapshots, onClose }) {
               <div className="history-detail-header">
                 <span className="history-date">{selected.date}</span>
                 <div className="history-summary">
+                  <span>투자원금 <b style={{color:'#ff8a65'}}>{fmt(selected.totalPrincipal)}원</b></span>
                   <span>평가금액 <b style={{color:'#00d4aa'}}>{fmt(selected.totalEval)}원</b></span>
                   <span>손익 <b className={cls(selected.totalProfit)}>{selected.totalProfit >= 0 ? '+' : ''}{fmt(selected.totalProfit)}원</b></span>
                   <span>수익률 <b className={cls(selected.totalProfitRate)}>{fmtRate(selected.totalProfitRate)}</b></span>
