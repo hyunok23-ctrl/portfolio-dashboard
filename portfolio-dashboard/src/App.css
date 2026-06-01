@@ -1359,45 +1359,61 @@ td.zero { color: var(--zero); }
   .ai-analysis { max-width: 100%; }
 }
 
-/* ─── 종목별 손익 요약 테이블 ──────────────────────────── */
-.code-summary-section {
-  margin: 0 20px 32px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+/* ─── 종목별 손익 요약 (chart-section 내 compact) ─────── */
+.code-summary-wrap {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.code-summary-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .code-summary-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: 0.75rem;
 }
 .code-summary-table thead tr {
-  background: var(--surface2);
   border-bottom: 1px solid var(--border);
 }
 .code-summary-table th {
-  padding: 10px 16px;
-  color: var(--text2);
+  padding: 5px 6px;
+  color: var(--text3);
   font-weight: 500;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 .code-summary-table td {
-  padding: 10px 16px;
+  padding: 6px 6px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
+  white-space: nowrap;
+}
+.code-summary-table td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 110px;
+}
+.cs-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+  display: inline-block;
 }
 .code-summary-table tbody tr:last-child td { border-bottom: none; }
-.code-summary-table tbody tr:hover { background: var(--surface2); }
+.code-summary-table tbody tr:hover { background: rgba(255,255,255,0.03); }
 .code-summary-total td {
   background: var(--surface2);
   border-top: 1px solid var(--border2);
+  border-bottom: none;
   font-weight: 600;
-}
-@media (max-width: 768px) {
-  .code-summary-section { margin: 0 12px 24px; }
-  .code-summary-table th,
-  .code-summary-table td { padding: 8px 10px; font-size: 0.8rem; }
 }
