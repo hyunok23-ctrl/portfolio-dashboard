@@ -356,7 +356,14 @@ td.zero { color: var(--zero); }
   padding: 24px;
   position: sticky;
   top: 84px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
 }
+.chart-section::-webkit-scrollbar { width: 4px; }
+.chart-section::-webkit-scrollbar-track { background: transparent; }
+.chart-section::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
 .pie-container {
   position: relative;
@@ -604,7 +611,7 @@ td.zero { color: var(--zero); }
 }
 @media (max-width: 1024px) {
   .content-grid { grid-template-columns: 1fr; }
-  .chart-section { position: static; }
+  .chart-section { position: static; max-height: none; overflow-y: visible; }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
