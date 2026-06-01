@@ -127,7 +127,11 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .btn-primary {
-  padding: 8px 18px;
+  padding: 0 18px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
   color: #0a0e1a;
   border: none;
@@ -628,20 +632,20 @@ td.zero { color: var(--zero); }
   .btn-text { display: none; }
   .btn-icon { font-size: 1rem; }
   .btn-primary {
-    padding: 6px 10px;
+    padding: 0 10px;
     font-size: 1rem;
     min-width: 36px;
     height: 36px;
     display: flex; align-items: center; justify-content: center;
   }
   .btn-secondary {
-    padding: 6px 8px;
+    padding: 0 8px;
     font-size: 1rem;
     min-width: 36px;
     height: 36px;
     display: flex; align-items: center; justify-content: center;
   }
-  .market-status { font-size: 0.72rem; padding: 3px 7px; }
+  .market-status { font-size: 0.72rem; padding: 0 7px; height: 36px; display: flex; align-items: center; }
 
   /* 요약카드 */
   .summary-grid {
@@ -746,7 +750,11 @@ td.zero { color: var(--zero); }
 
 /* ─── 히스토리 차트 ──────────────────────────────────── */
 .btn-secondary {
-  padding: 8px 14px;
+  padding: 0 14px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--surface2);
   color: var(--text2);
   border: 1px solid var(--border2);
