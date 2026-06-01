@@ -826,13 +826,13 @@ export default function App() {
                           <div className="action-btns">
                             {editingId === h.id ? (
                               <>
-                                <button className="btn-save" onClick={() => saveEdit(h.id)}>저장</button>
-                                <button className="btn-cancel-sm" onClick={() => setEditingId(null)}>취소</button>
+                                <button className="btn-save" onClick={e => { e.stopPropagation(); saveEdit(h.id); }}>저장</button>
+                                <button className="btn-cancel-sm" onClick={e => { e.stopPropagation(); setEditingId(null); }}>취소</button>
                               </>
                             ) : (
                               <>
-                                <button className="btn-edit" onClick={() => startEdit(h)}>수정</button>
-                                <button className="btn-del" onClick={() => removeHolding(h.id)}>삭제</button>
+                                <button className="btn-edit" onClick={e => { e.stopPropagation(); startEdit(h); }}>수정</button>
+                                <button className="btn-del" onClick={e => { e.stopPropagation(); removeHolding(h.id); }}>삭제</button>
                               </>
                             )}
                           </div>
