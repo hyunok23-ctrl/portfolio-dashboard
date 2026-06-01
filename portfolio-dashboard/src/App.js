@@ -479,7 +479,7 @@ export default function App() {
   const [selectedStock, setSelectedStock] = useState(null);
   const intervalRef = useRef(null);
 
-  // 서버에서 데이터 불러오기 (실패 시 localStorage fallback)
+  // 서버에서 데이터 불러오기 (Redis 빈 배열 포함 실패 시 localStorage fallback)
   useEffect(() => {
     const loadFromLocal = () => {
       try {
@@ -491,12 +491,13 @@ export default function App() {
     fetch('/api/holdings')
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          // API 성공: 서버 데이터 우선 사용
+        if (Array.isArray(data) && data.length > 0) {
+          // Redis에 데이터 있음 → 서버 데이터 사용
           setHoldings(data);
           setDataLoaded(true);
         } else {
-          // API가 에러 객체 반환 → localStorage fallback
+          // Redis 빈 배열이거나 에러 객체 → localStorage fallback
+          // (이후 save effect가 자동으로 Redis에 동기화)
           loadFromLocal();
         }
       })
