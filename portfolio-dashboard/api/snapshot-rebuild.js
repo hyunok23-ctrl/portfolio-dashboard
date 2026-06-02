@@ -79,22 +79,25 @@ export default async function handler(req, res) {
 
   try {
     // ① ph:index 에서 전체 날짜 목록 가져오기
-    const dates = await rdb('zrevrange', INDEX_KEY, 0, -1);
-    const dateList = !dates ? [] : Array.isArray(dates) ? dates : [dates];
+    const rawDates = await rdb('zrevrange', INDEX_KEY, 0, 100);
+    const dateList = !rawDates ? [] : Array.isArray(rawDates) ? rawDates : [rawDates];
 
-    // ② ph:* 스냅샷 데이터 로드 (closing 여부 무관 전체 재처리)
+    const debugInfo = { indexResult: rawDates, dateList, snapSamples: [] };
+
+    // ② ph:* 스냅샷 데이터 로드 (전체 재처리)
     const snapshots = [];
     for (const dateStr of dateList) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
       const raw = await rget(`ph:${dateStr}`);
       if (raw) {
         const d = JSON.parse(raw);
+        debugInfo.snapSamples.push({ date: d.date, holdingCount: d.holdings?.length, closing: d.closing });
         if (d.date && d.holdings?.length > 0) snapshots.push(d);
       }
     }
 
     if (snapshots.length === 0) {
-      return res.status(200).json({ ok: true, message: '재수집할 데이터 없음' });
+      return res.status(200).json({ ok: true, message: '재수집할 데이터 없음', debug: debugInfo });
     }
 
     if (snapshots.length === 0) {
