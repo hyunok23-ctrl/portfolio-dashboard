@@ -81,25 +81,33 @@ export default async function handler(req, res) {
 
       const key = 'snapshot:' + today;
 
-      // 장 마감 여부 확인 (KST 15:30 이후 = 장 마감)
+      // 현재 KST 시간 (분 단위)
       const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const kstMin = nowKST.getUTCHours() * 60 + nowKST.getUTCMinutes();
-      const marketClosed = kstMin >= 15 * 60 + 30; // 15:30 이후
+      const marketClosed = kstMin >= 15 * 60 + 30; // 15:30 이후 = 장 마감
 
-      // 장 중에는 이미 저장된 데이터 있으면 스킵
-      // 장 마감 이후에는 항상 최신 가격으로 덮어써서 종가 반영
       const existing = await redisGet(key);
-      if (existing && !marketClosed) {
-        return res.status(200).json({ ok: true, skipped: true, date: today });
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        // 이미 장 마감 후에 저장된 스냅샷이면 → 고정 (덮어쓰지 않음)
+        if (parsed.closingSnapshot) {
+          return res.status(200).json({ ok: true, skipped: true, reason: 'already_closed', date: today });
+        }
+        // 장 중 스냅샷이 있고 아직 장 중 → 스킵
+        if (!marketClosed) {
+          return res.status(200).json({ ok: true, skipped: true, date: today });
+        }
+        // 장 중 스냅샷 있고 장 마감됐으면 → 종가로 1회 덮어씀
       }
 
       const snapshot = {
         date: today,
-        ...req.body, // { totalPrincipal, totalEval, totalProfit, totalProfitRate, holdings }
+        closingSnapshot: marketClosed, // true면 종가 확정, 이후 덮어쓰기 불가
+        ...req.body,
       };
 
       await redisSet(key, JSON.stringify(snapshot));
-      return res.status(200).json({ ok: true, date: today, updated: marketClosed });
+      return res.status(200).json({ ok: true, date: today, closing: marketClosed });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
