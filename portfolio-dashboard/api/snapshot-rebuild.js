@@ -122,11 +122,12 @@ export default async function handler(req, res) {
     const token = await getToken();
     if (!token) return res.status(500).json({ error: 'KIS 토큰 발급 실패' });
 
-    // ⑥ 종목별 일봉 종가 조회 (1종목 = 1번 호출)
-    const priceMap = {}; // { code: { "20260521": 76000, ... } }
-    for (const code of codes) {
-      priceMap[code] = await fetchDailyPrices(code, token, fromKIS, toKIS);
-      await new Promise(r => setTimeout(r, 200)); // rate limit
+    // ⑥ 종목별 일봉 종가 조회 — 5개씩 병렬 처리로 속도 향상
+    const priceMap = {};
+    for (let i = 0; i < codes.length; i += 5) {
+      const batch = codes.slice(i, i + 5);
+      const results = await Promise.all(batch.map(c => fetchDailyPrices(c, token, fromKIS, toKIS)));
+      batch.forEach((c, j) => { priceMap[c] = results[j]; });
     }
 
     // ⑦ 스냅샷별 재계산 + 저장
