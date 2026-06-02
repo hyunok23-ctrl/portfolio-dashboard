@@ -81,9 +81,15 @@ export default async function handler(req, res) {
 
       const key = 'snapshot:' + today;
 
-      // 이미 오늘 저장된 데이터가 있으면 스킵
+      // 장 마감 여부 확인 (KST 15:30 이후 = 장 마감)
+      const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const kstMin = nowKST.getUTCHours() * 60 + nowKST.getUTCMinutes();
+      const marketClosed = kstMin >= 15 * 60 + 30; // 15:30 이후
+
+      // 장 중에는 이미 저장된 데이터 있으면 스킵
+      // 장 마감 이후에는 항상 최신 가격으로 덮어써서 종가 반영
       const existing = await redisGet(key);
-      if (existing) {
+      if (existing && !marketClosed) {
         return res.status(200).json({ ok: true, skipped: true, date: today });
       }
 
@@ -93,7 +99,7 @@ export default async function handler(req, res) {
       };
 
       await redisSet(key, JSON.stringify(snapshot));
-      return res.status(200).json({ ok: true, date: today });
+      return res.status(200).json({ ok: true, date: today, updated: marketClosed });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
