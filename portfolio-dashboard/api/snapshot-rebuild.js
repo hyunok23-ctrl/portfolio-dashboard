@@ -78,25 +78,23 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
-    // ① 기존 snapshot:* 모두 읽기
-    const keysRes = await fetch(`${REDIS_URL}/keys/${encodeURIComponent('snapshot:*')}`, {
-      headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
-    });
-    const keysData = await keysRes.json();
-    const oldKeys = (keysData?.result || []).filter(k => /^snapshot:\d{4}-\d{2}-\d{2}$/.test(k));
+    // ① ph:index 에서 전체 날짜 목록 가져오기
+    const dates = await rdb('zrevrange', INDEX_KEY, 0, -1);
+    const dateList = !dates ? [] : Array.isArray(dates) ? dates : [dates];
 
-    if (oldKeys.length === 0) {
-      return res.status(200).json({ ok: true, message: '재수집할 기존 데이터 없음' });
-    }
-
-    // ② 스냅샷 데이터 로드
+    // ② ph:* 스냅샷 데이터 로드 (closing 여부 무관 전체 재처리)
     const snapshots = [];
-    for (const k of oldKeys) {
-      const raw = await rget(k);
+    for (const dateStr of dateList) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
+      const raw = await rget(`ph:${dateStr}`);
       if (raw) {
         const d = JSON.parse(raw);
-        if (d.date && !d.closing) snapshots.push(d); // 아직 종가 미확정인 것만
+        if (d.date && d.holdings?.length > 0) snapshots.push(d);
       }
+    }
+
+    if (snapshots.length === 0) {
+      return res.status(200).json({ ok: true, message: '재수집할 데이터 없음' });
     }
 
     if (snapshots.length === 0) {
@@ -160,12 +158,9 @@ export default async function handler(req, res) {
         holdings,
       };
 
-      // ph:* 에 저장 + 인덱스 등록
+      // ph:* 에 덮어씀 + 인덱스 등록
       await rset(`ph:${snap.date}`, JSON.stringify(newSnap));
       await zadd(INDEX_KEY, dateToScore(snap.date), snap.date);
-
-      // 기존 snapshot:* 키 삭제
-      await rdel(`snapshot:${snap.date}`);
 
       results.push({ date: snap.date, totalEval, totalProfitRate: totalProfitRate.toFixed(2) });
     }
