@@ -1569,3 +1569,99 @@ td.zero { color: var(--zero); }
     vertical-align: middle;
   }
 }
+
+/* ─── 종목 통합 카드 뷰 ────────────────────────────────── */
+.stock-cards {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+.sc-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sc-row:last-child { border-bottom: none; }
+.sc-total { background: var(--surface2); padding: 8px 6px; border-radius: var(--radius-sm); margin-top: 4px; }
+
+/* 헤더: 종목명·수량·단가·계좌·비중 한 줄 */
+.sc-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.sc-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sc-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.sc-qty {
+  font-size: 0.72rem;
+  color: var(--text);
+  font-weight: 400;
+}
+.sc-avgprice {
+  font-size: 0.72rem;
+  color: var(--text);
+  margin-left: 2px;
+}
+.sc-acc {
+  font-size: 0.68rem;
+  color: var(--text3);
+}
+.sc-pct {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-left: auto;
+}
+
+/* 바디: 원금/평가 + 손익/수익률 */
+.sc-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.sc-nums-left {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+.sc-num-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sc-lbl {
+  font-size: 0.65rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sc-val {
+  font-size: 0.78rem;
+  color: var(--text);
+}
+.sc-nums-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+.sc-profit {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.sc-rate {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.sc-profit.pos, .sc-rate.pos { color: var(--pos); }
+.sc-profit.neg, .sc-rate.neg { color: var(--neg); }
+.sc-profit.zero, .sc-rate.zero { color: var(--zero); }

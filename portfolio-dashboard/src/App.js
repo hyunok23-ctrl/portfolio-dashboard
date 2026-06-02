@@ -1014,69 +1014,76 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 범례 */}
-              <div className="pie-legend">
-                {pieData.map((d, idx) => (
-                  <div key={idx} className="legend-item">
-                    <span className="legend-dot" style={{ background: COLORS[idx % COLORS.length] }} />
-                    <span className="legend-name">
-                      {d.name}
-                      <span className="legend-qty">×{d.qty.toLocaleString()}</span>
-                    </span>
-                    <span className="legend-value">
-                      {d.avgPrice > 0 ? fmt(d.avgPrice) : '—'}원 <span className="legend-acc">({d.accountLabel})</span>
-                    </span>
-                    <span className="legend-pct">{d.pct.toFixed(1)}%</span>
+              {/* 종목 통합 카드 (비중+손익 한눈에) */}
+              <div className="stock-cards">
+                {pieData.map((d, idx) => {
+                  const profit = d.value - d.principal;
+                  const profitRate = d.principal > 0 ? (profit / d.principal) * 100 : 0;
+                  return (
+                    <div key={d.code} className="sc-row">
+                      {/* 헤더: 종목명·수량·단가·계좌·비중 */}
+                      <div className="sc-header">
+                        <span className="sc-dot" style={{ background: COLORS[idx % COLORS.length] }} />
+                        <span className="sc-name">
+                          {d.name}
+                          <span className="sc-qty"> ×{d.qty.toLocaleString()}</span>
+                        </span>
+                        <span className="sc-avgprice">{fmt(d.avgPrice)}원</span>
+                        <span className="sc-acc">({d.accountLabel})</span>
+                        <span className="sc-pct">{d.pct.toFixed(1)}%</span>
+                      </div>
+                      {/* 바디: 원금/평가금액 + 손익/수익률 */}
+                      <div className="sc-body">
+                        <div className="sc-nums-left">
+                          <div className="sc-num-item">
+                            <span className="sc-lbl">원금</span>
+                            <span className="sc-val">{fmt(d.principal)}</span>
+                          </div>
+                          <div className="sc-num-item">
+                            <span className="sc-lbl">평가</span>
+                            <span className="sc-val">{d.value > 0 ? fmt(d.value) : '—'}</span>
+                          </div>
+                        </div>
+                        <div className="sc-nums-right">
+                          <div className={`sc-profit ${cls(profit)}`}>
+                            {d.value > 0 ? (profit >= 0 ? '+' : '') + fmt(profit) : '—'}
+                          </div>
+                          <div className={`sc-rate ${cls(profitRate)}`}>
+                            {d.value > 0 ? fmtRate(profitRate) : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* 합계 행 */}
+                <div className="sc-row sc-total">
+                  <div className="sc-header">
+                    <span className="sc-dot" style={{ background: 'transparent' }} />
+                    <span className="sc-name" style={{ fontWeight: 700 }}>합계</span>
                   </div>
-                ))}
-              </div>
-
-              {/* 종목별 손익 요약 (종목코드 기준) */}
-              {codeData.length > 0 && (
-                <div className="code-summary-wrap">
-                  <div className="code-summary-title">종목별 손익 <span className="section-sub">코드 기준</span></div>
-                  <table className="code-summary-table">
-                    <thead>
-                      <tr>
-                        <th>종목</th>
-                        <th className="num">원금</th>
-                        <th className="num">평가금액</th>
-                        <th className="num">손익</th>
-                        <th className="num">수익률</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {codeData.map((d, i) => (
-                        <tr key={d.code}>
-                          <td>
-                            <span className="color-dot" style={{ background: COLORS[i % COLORS.length] }} />
-                            <span className="cs-name">{d.name}</span>
-                          </td>
-                          <td className="num">{fmt(d.principal)}</td>
-                          <td className="num">{d.evalAmount > 0 ? fmt(d.evalAmount) : '—'}</td>
-                          <td className={`num ${cls(d.profit)}`}>
-                            {d.evalAmount > 0 ? (d.profit >= 0 ? '+' : '') + fmt(d.profit) : '—'}
-                          </td>
-                          <td className={`num rate-cell ${cls(d.profitRate)}`}>
-                            {d.evalAmount > 0 ? fmtRate(d.profitRate) : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="code-summary-total">
-                        <td><span className="subtotal-label">합계</span></td>
-                        <td className="num">{fmt(totalPrincipal)}</td>
-                        <td className="num">{totalEval > 0 ? fmt(totalEval) : '—'}</td>
-                        <td className={`num ${cls(totalProfit)}`}>
-                          {totalEval > 0 ? (totalProfit >= 0 ? '+' : '') + fmt(totalProfit) : '—'}
-                        </td>
-                        <td className={`num rate-cell ${cls(totalProfitRate)}`}>
-                          {totalEval > 0 ? fmtRate(totalProfitRate) : '—'}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="sc-body">
+                    <div className="sc-nums-left">
+                      <div className="sc-num-item">
+                        <span className="sc-lbl">원금</span>
+                        <span className="sc-val">{fmt(totalPrincipal)}</span>
+                      </div>
+                      <div className="sc-num-item">
+                        <span className="sc-lbl">평가</span>
+                        <span className="sc-val">{totalEval > 0 ? fmt(totalEval) : '—'}</span>
+                      </div>
+                    </div>
+                    <div className="sc-nums-right">
+                      <div className={`sc-profit ${cls(totalProfit)}`}>
+                        {totalEval > 0 ? (totalProfit >= 0 ? '+' : '') + fmt(totalProfit) : '—'}
+                      </div>
+                      <div className={`sc-rate ${cls(totalProfitRate)}`}>
+                        {totalEval > 0 ? fmtRate(totalProfitRate) : '—'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
             </section>
           )}
         </div>
