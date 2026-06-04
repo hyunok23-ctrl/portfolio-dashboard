@@ -983,7 +983,46 @@ export default function App() {
           {/* 우측 패널: 비중 차트 */}
           {pieData.length > 0 && (
             <section className="chart-section">
-              <div className="section-header">
+
+              {/* 실시간 주가 서머리 */}
+              <div className="price-summary">
+                <div className="ps-header">
+                  <span className="ps-title">실시간 시세</span>
+                  {lastUpdated && (
+                    <span className="ps-updated">
+                      {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                {pieData.map((d, idx) => {
+                  const pd = prices[d.code];
+                  const curPrice  = pd?.price || 0;
+                  const chgPrice  = pd?.changePrice || 0;
+                  const chgRate   = pd?.change || 0;
+                  const dir = chgPrice > 0 ? '▲' : chgPrice < 0 ? '▼' : '';
+                  return (
+                    <div key={d.code} className="ps-row">
+                      <span className="ps-dot" style={{ background: COLORS[idx % COLORS.length] }} />
+                      <div className="ps-info">
+                        <span className="ps-name">{d.name}</span>
+                        <span className="ps-code">{d.code}</span>
+                      </div>
+                      <div className="ps-prices">
+                        <span className="ps-price">
+                          {curPrice > 0 ? fmt(curPrice) : '—'}
+                        </span>
+                        {curPrice > 0 && (
+                          <span className={`ps-change ${cls(chgRate)}`}>
+                            {dir}{Math.abs(chgPrice).toLocaleString()} ({chgRate >= 0 ? '+' : ''}{chgRate.toFixed(2)}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="section-header" style={{marginTop: 16}}>
                 <h2>종목 비중</h2>
               </div>
               <div className="pie-container">
