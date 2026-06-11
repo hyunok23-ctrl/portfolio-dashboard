@@ -600,22 +600,29 @@ export default function App() {
         windowWidth: document.documentElement.scrollWidth,
         windowHeight: document.documentElement.scrollHeight,
       });
-      canvas.toBlob(async (blob) => {
+
+      // Chrome: ClipboardItem에 Promise 직접 전달 → 사용자 제스처 컨텍스트 유지
+      const blobPromise = new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+      if (navigator.clipboard && navigator.clipboard.write) {
         try {
           await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob }),
+            new ClipboardItem({ 'image/png': blobPromise }),
           ]);
-        } catch {
-          // 클립보드 API 미지원 시 다운로드 fallback
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `portfolio-${new Date().toISOString().slice(0,10)}.png`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-        setCapturing(false);
-      }, 'image/png');
+          setCapturing(false);
+          return;
+        } catch {}
+      }
+
+      // fallback: 파일 다운로드
+      const blob = await blobPromise;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portfolio-${new Date().toISOString().slice(0,10)}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setCapturing(false);
     } catch {
       setCapturing(false);
     }
