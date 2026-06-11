@@ -124,6 +124,20 @@ body {
 }
 .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
 .btn-refresh.spinning { animation: spin 1s linear infinite; }
+
+.btn-capture {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-capture:hover { border-color: #4fc3f7; color: #4fc3f7; }
+.btn-capture.capturing { opacity: 0.6; cursor: not-allowed; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .btn-primary {
@@ -671,10 +685,11 @@ td.zero { color: var(--zero); }
   /* 버튼 텍스트 숨기고 아이콘만 */
   .btn-text { display: none; }
 
-  /* 버튼 3개: 40×40 완전 고정 */
+  /* 버튼 4개: 40×40 완전 고정 */
   .header-right .btn-primary,
   .header-right .btn-secondary,
-  .header-right .btn-refresh {
+  .header-right .btn-refresh,
+  .header-right .btn-capture {
     -webkit-appearance: none !important;
     appearance: none !important;
     width: 40px !important;

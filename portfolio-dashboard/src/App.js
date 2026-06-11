@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid
 } from 'recharts';
+import html2canvas from 'html2canvas';
 import './App.css';
 
 // ─── 상수 ──────────────────────────────────────────────
@@ -583,7 +584,42 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [editVal, setEditVal] = useState({});
   const [selectedStock, setSelectedStock] = useState(null);
+  const [capturing, setCapturing] = useState(false);
   const intervalRef = useRef(null);
+
+  const captureScreen = useCallback(async () => {
+    setCapturing(true);
+    try {
+      const canvas = await html2canvas(document.body, {
+        backgroundColor: '#0d1117',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+      });
+      canvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob }),
+          ]);
+        } catch {
+          // 클립보드 API 미지원 시 다운로드 fallback
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `portfolio-${new Date().toISOString().slice(0,10)}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        setCapturing(false);
+      }, 'image/png');
+    } catch {
+      setCapturing(false);
+    }
+  }, []);
 
   // 서버에서 데이터 불러오기 (Redis 빈 배열 포함 실패 시 localStorage fallback)
   useEffect(() => {
@@ -794,6 +830,9 @@ export default function App() {
                 {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 업데이트
               </span>
             )}
+            <button className={`btn-capture ${capturing ? 'capturing' : ''}`} onClick={captureScreen} disabled={capturing} title="화면 캡처 후 클립보드 복사" style={{flexShrink:0}}>
+              {capturing ? '⏳' : '📷'}
+            </button>
             <button className={`btn-refresh ${loading ? 'spinning' : ''}`} onClick={fetchPrices} disabled={loading} style={{flexShrink:0}}>
               ↻
             </button>
