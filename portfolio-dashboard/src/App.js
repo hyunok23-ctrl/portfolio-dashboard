@@ -585,36 +585,47 @@ export default function App() {
   const [editVal, setEditVal] = useState({});
   const [selectedStock, setSelectedStock] = useState(null);
   const [capturing, setCapturing] = useState(false);
+  const [captureToast, setCaptureToast] = useState(null); // null | 'ok' | 'download' | 'error'
   const intervalRef = useRef(null);
+
+  const showToast = (type) => {
+    setCaptureToast(type);
+    setTimeout(() => setCaptureToast(null), 2500);
+  };
 
   const captureScreen = useCallback(async () => {
     setCapturing(true);
-    try {
-      const canvas = await html2canvas(document.body, {
-        backgroundColor: '#0d1117',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight,
-      });
 
-      // Chrome: ClipboardItem에 Promise 직접 전달 → 사용자 제스처 컨텍스트 유지
-      const blobPromise = new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    // html2canvas + toBlob 전체를 Promise 체인으로 미리 생성 (await 하지 않음)
+    // Chrome은 clipboard.write() 호출 자체가 사용자 제스처 컨텍스트 내에 있어야 함
+    // await로 html2canvas를 먼저 기다리면 제스처 컨텍스트가 만료됨
+    const blobPromise = html2canvas(document.body, {
+      backgroundColor: '#0d1117',
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight,
+    }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
 
-      if (navigator.clipboard && navigator.clipboard.write) {
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blobPromise }),
-          ]);
-          setCapturing(false);
-          return;
-        } catch {}
+    if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+      try {
+        // clipboard.write를 await 없이 즉시 호출 → 제스처 컨텍스트 유지
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blobPromise }),
+        ]);
+        setCapturing(false);
+        showToast('ok');
+        return;
+      } catch (e) {
+        console.warn('클립보드 복사 실패:', e);
       }
+    }
 
-      // fallback: 파일 다운로드
+    // fallback: 파일 다운로드
+    try {
       const blob = await blobPromise;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -622,10 +633,12 @@ export default function App() {
       a.download = `portfolio-${new Date().toISOString().slice(0,10)}.png`;
       a.click();
       URL.revokeObjectURL(url);
-      setCapturing(false);
-    } catch {
-      setCapturing(false);
+      showToast('download');
+    } catch (e) {
+      console.error('캡처 실패:', e);
+      showToast('error');
     }
+    setCapturing(false);
   }, []);
 
   // 서버에서 데이터 불러오기 (Redis 빈 배열 포함 실패 시 localStorage fallback)
@@ -851,6 +864,14 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        {captureToast && (
+          <div className={`capture-toast capture-toast-${captureToast}`}>
+            {captureToast === 'ok'       && '📋 클립보드에 복사됐습니다'}
+            {captureToast === 'download' && '💾 이미지가 저장됐습니다'}
+            {captureToast === 'error'    && '❌ 캡처에 실패했습니다'}
+          </div>
+        )}
 
         {/* 요약 카드 - sticky */}
         <section className="summary-grid">
