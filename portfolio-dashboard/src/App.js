@@ -606,8 +606,12 @@ export default function App() {
       allowTaint: true,
       scrollX: 0,
       scrollY: -window.scrollY,
-      windowWidth: document.documentElement.scrollWidth,
-      windowHeight: document.documentElement.scrollHeight,
+      x: 0,
+      y: window.scrollY,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
     }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
 
     if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
