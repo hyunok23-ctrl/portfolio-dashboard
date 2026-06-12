@@ -601,14 +601,14 @@ export default function App() {
     // await로 html2canvas를 먼저 기다리면 제스처 컨텍스트가 만료됨
     const blobPromise = html2canvas(document.body, {
       backgroundColor: '#0d1117',
-      scale: 2,
+      scale: window.devicePixelRatio || 1,
       useCORS: true,
       allowTaint: true,
       scrollX: 0,
       scrollY: -window.scrollY,
       windowWidth: document.documentElement.scrollWidth,
       windowHeight: document.documentElement.scrollHeight,
-    }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
+    }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
 
     if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
       try {
