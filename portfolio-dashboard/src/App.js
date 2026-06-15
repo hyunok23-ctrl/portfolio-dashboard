@@ -599,14 +599,20 @@ export default function App() {
     // html2canvas + toBlob 전체를 Promise 체인으로 미리 생성 (await 하지 않음)
     // Chrome은 clipboard.write() 호출 자체가 사용자 제스처 컨텍스트 내에 있어야 함
     // await로 html2canvas를 먼저 기다리면 제스처 컨텍스트가 만료됨
+    // LLM 판독 가능한 최소 너비 1440px 보장
+    // 모바일(390px 뷰포트)에서 devicePixelRatio만 쓰면 해상도 부족
+    const scrollW = document.documentElement.scrollWidth;
+    const minScale = Math.ceil(1440 / scrollW);
+    const scale = Math.max(window.devicePixelRatio || 1, minScale);
+
     const blobPromise = html2canvas(document.body, {
       backgroundColor: '#0d1117',
-      scale: window.devicePixelRatio || 1,
+      scale,
       useCORS: true,
       allowTaint: true,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: document.documentElement.scrollWidth,
+      windowWidth: scrollW,
       windowHeight: document.documentElement.scrollHeight,
     }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
 
