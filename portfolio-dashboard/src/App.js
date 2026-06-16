@@ -1079,6 +1079,67 @@ export default function App() {
                 </table>
               </div>
             )}
+
+            {/* ── 계좌별 현황 ── */}
+            {accountRows.length > 0 && (
+              <div className="acct-section">
+                <div className="acct-section-header">
+                  <span className="acct-section-title">계좌별 현황</span>
+                  <span className="acct-section-hint">납입원금 탭하여 수정</span>
+                </div>
+                <div className="acct-table-wrap">
+                  <table className="acct-table">
+                    <thead>
+                      <tr>
+                        <th>계좌</th>
+                        <th>납입원금</th>
+                        <th>평가금액</th>
+                        <th>수익금액</th>
+                        <th>수익률</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accountRows.map(row => (
+                        <tr key={row.acct}>
+                          <td className="acct-name-cell">{row.acct.replace('계좌', '')}</td>
+                          <td className="acct-principal-cell"
+                              onClick={() => { setEditingAcct(row.acct); setEditingAcctVal(String(Math.round(row.principal))); }}>
+                            {editingAcct === row.acct ? (
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={editingAcctVal}
+                                className="acct-input"
+                                onChange={e => setEditingAcctVal(e.target.value.replace(/[^0-9]/g, ''))}
+                                onBlur={() => {
+                                  const v = parseInt(editingAcctVal, 10);
+                                  if (!isNaN(v) && v >= 0) saveAcctPrincipal(row.acct, v);
+                                  setEditingAcct(null);
+                                }}
+                                onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                                autoFocus
+                              />
+                            ) : (
+                              <span className="acct-editable">{fmt(row.principal)}<span className="acct-edit-icon">✎</span></span>
+                            )}
+                          </td>
+                          <td className="acct-num">{fmt(row.evalAmt)}</td>
+                          <td className={`acct-num ${cls(row.profit)}`}>{row.profit >= 0 ? '+' : ''}{fmt(row.profit)}</td>
+                          <td className={`acct-num ${cls(row.rate)}`}>{fmtRate(row.rate)}</td>
+                        </tr>
+                      ))}
+                      <tr className="acct-total-row">
+                        <td>합계</td>
+                        <td className="acct-num">{fmt(acctTotalPrincipal)}</td>
+                        <td className="acct-num">{fmt(acctTotalEval)}</td>
+                        <td className={`acct-num ${cls(acctTotalProfit)}`}>{acctTotalProfit >= 0 ? '+' : ''}{fmt(acctTotalProfit)}</td>
+                        <td className={`acct-num ${cls(acctTotalRate)}`}>{fmtRate(acctTotalRate)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* 우측 패널: 비중 차트 */}
@@ -1227,67 +1288,6 @@ export default function App() {
             </section>
           )}
         </div>
-
-        {/* ── 계좌별 현황 ── */}
-        {accountRows.length > 0 && (
-          <section className="acct-section">
-            <div className="acct-section-header">
-              <span className="acct-section-title">계좌별 현황</span>
-              <span className="acct-section-hint">납입원금 탭하여 수정</span>
-            </div>
-            <div className="acct-table-wrap">
-              <table className="acct-table">
-                <thead>
-                  <tr>
-                    <th>계좌</th>
-                    <th>납입원금</th>
-                    <th>평가금액</th>
-                    <th>수익금액</th>
-                    <th>수익률</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accountRows.map(row => (
-                    <tr key={row.acct}>
-                      <td className="acct-name-cell">{row.acct.replace('계좌', '')}</td>
-                      <td className="acct-principal-cell"
-                          onClick={() => { setEditingAcct(row.acct); setEditingAcctVal(String(Math.round(row.principal))); }}>
-                        {editingAcct === row.acct ? (
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={editingAcctVal}
-                            className="acct-input"
-                            onChange={e => setEditingAcctVal(e.target.value.replace(/[^0-9]/g, ''))}
-                            onBlur={() => {
-                              const v = parseInt(editingAcctVal, 10);
-                              if (!isNaN(v) && v >= 0) saveAcctPrincipal(row.acct, v);
-                              setEditingAcct(null);
-                            }}
-                            onKeyDown={e => e.key === 'Enter' && e.target.blur()}
-                            autoFocus
-                          />
-                        ) : (
-                          <span className="acct-editable">{fmt(row.principal)}<span className="acct-edit-icon">✎</span></span>
-                        )}
-                      </td>
-                      <td className="acct-num">{fmt(row.evalAmt)}</td>
-                      <td className={`acct-num ${cls(row.profit)}`}>{row.profit >= 0 ? '+' : ''}{fmt(row.profit)}</td>
-                      <td className={`acct-num ${cls(row.rate)}`}>{fmtRate(row.rate)}</td>
-                    </tr>
-                  ))}
-                  <tr className="acct-total-row">
-                    <td>합계</td>
-                    <td className="acct-num">{fmt(acctTotalPrincipal)}</td>
-                    <td className="acct-num">{fmt(acctTotalEval)}</td>
-                    <td className={`acct-num ${cls(acctTotalProfit)}`}>{acctTotalProfit >= 0 ? '+' : ''}{fmt(acctTotalProfit)}</td>
-                    <td className={`acct-num ${cls(acctTotalRate)}`}>{fmtRate(acctTotalRate)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
 
       </main>
 

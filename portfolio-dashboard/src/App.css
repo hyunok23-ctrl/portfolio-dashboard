@@ -1788,10 +1788,8 @@ td.zero { color: var(--zero); }
 
 /* ── 계좌별 현황 ─────────────────────────────────────── */
 .acct-section {
-  margin: 0 16px 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
   overflow: hidden;
 }
 .acct-section-header {
@@ -1878,7 +1876,7 @@ td.zero { color: var(--zero); }
 .acct-table td.neg { color: var(--neg); }
 
 @media (max-width: 768px) {
-  .acct-section { margin: 0 8px 20px; border-radius: 10px; }
+  .acct-section { margin-top: 16px; border-radius: 0; }
   .acct-table { font-size: 0.78rem; min-width: 340px; }
   .acct-table th, .acct-table td { padding: 8px 8px; }
   .acct-input { width: 90px; font-size: 0.78rem; }
