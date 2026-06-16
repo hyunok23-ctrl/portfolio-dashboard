@@ -585,7 +585,12 @@ export default function App() {
   const [editVal, setEditVal] = useState({});
   const [selectedStock, setSelectedStock] = useState(null);
   const [capturing, setCapturing] = useState(false);
-  const [captureToast, setCaptureToast] = useState(null); // null | 'ok' | 'download' | 'error'
+  const [captureToast, setCaptureToast] = useState(null);
+  const [acctPrincipals, setAcctPrincipals] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('portfolio_acct_principals')) || {}; } catch { return {}; }
+  });
+  const [editingAcct, setEditingAcct] = useState(null);
+  const [editingAcctVal, setEditingAcctVal] = useState('');
   const intervalRef = useRef(null);
 
   const showToast = (type) => {
@@ -785,6 +790,29 @@ export default function App() {
   const totalEval = enriched.reduce((s, h) => s + h.evalAmount, 0);
   const totalProfit = totalEval - totalPrincipal;
   const totalProfitRate = totalPrincipal > 0 ? (totalProfit / totalPrincipal) * 100 : 0;
+
+  // 계좌별 현황 집계
+  const accountRows = ACCOUNT_ORDER.map(acct => {
+    const group = enriched.filter(h => getAccountType(h.name) === acct);
+    if (group.length === 0) return null;
+    const autoEval = group.reduce((s, h) => s + h.evalAmount, 0);
+    const autoPrincipal = group.reduce((s, h) => s + h.principal, 0);
+    const principal = acctPrincipals[acct] !== undefined ? acctPrincipals[acct] : autoPrincipal;
+    const profit = autoEval - principal;
+    const rate = principal > 0 ? (profit / principal) * 100 : 0;
+    return { acct, principal, evalAmt: autoEval, profit, rate };
+  }).filter(Boolean);
+
+  const acctTotalPrincipal = accountRows.reduce((s, r) => s + r.principal, 0);
+  const acctTotalEval      = accountRows.reduce((s, r) => s + r.evalAmt, 0);
+  const acctTotalProfit    = acctTotalEval - acctTotalPrincipal;
+  const acctTotalRate      = acctTotalPrincipal > 0 ? (acctTotalProfit / acctTotalPrincipal) * 100 : 0;
+
+  const saveAcctPrincipal = (acct, val) => {
+    const next = { ...acctPrincipals, [acct]: val };
+    setAcctPrincipals(next);
+    localStorage.setItem('portfolio_acct_principals', JSON.stringify(next));
+  };
 
   // 비중 차트는 종목코드 기준으로 합산 (같은 종목이 여러 계좌에 있어도 하나로)
   // 보유 계좌 목록도 함께 집계해 범례 금액 옆에 표시: (종합+ISA), (3계좌), (연금만)
@@ -1199,6 +1227,67 @@ export default function App() {
             </section>
           )}
         </div>
+
+        {/* ── 계좌별 현황 ── */}
+        {accountRows.length > 0 && (
+          <section className="acct-section">
+            <div className="acct-section-header">
+              <span className="acct-section-title">계좌별 현황</span>
+              <span className="acct-section-hint">납입원금 탭하여 수정</span>
+            </div>
+            <div className="acct-table-wrap">
+              <table className="acct-table">
+                <thead>
+                  <tr>
+                    <th>계좌</th>
+                    <th>납입원금</th>
+                    <th>평가금액</th>
+                    <th>수익금액</th>
+                    <th>수익률</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountRows.map(row => (
+                    <tr key={row.acct}>
+                      <td className="acct-name-cell">{row.acct.replace('계좌', '')}</td>
+                      <td className="acct-principal-cell"
+                          onClick={() => { setEditingAcct(row.acct); setEditingAcctVal(String(Math.round(row.principal))); }}>
+                        {editingAcct === row.acct ? (
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editingAcctVal}
+                            className="acct-input"
+                            onChange={e => setEditingAcctVal(e.target.value.replace(/[^0-9]/g, ''))}
+                            onBlur={() => {
+                              const v = parseInt(editingAcctVal, 10);
+                              if (!isNaN(v) && v >= 0) saveAcctPrincipal(row.acct, v);
+                              setEditingAcct(null);
+                            }}
+                            onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                            autoFocus
+                          />
+                        ) : (
+                          <span className="acct-editable">{fmt(row.principal)}<span className="acct-edit-icon">✎</span></span>
+                        )}
+                      </td>
+                      <td className="acct-num">{fmt(row.evalAmt)}</td>
+                      <td className={`acct-num ${cls(row.profit)}`}>{row.profit >= 0 ? '+' : ''}{fmt(row.profit)}</td>
+                      <td className={`acct-num ${cls(row.rate)}`}>{fmtRate(row.rate)}</td>
+                    </tr>
+                  ))}
+                  <tr className="acct-total-row">
+                    <td>합계</td>
+                    <td className="acct-num">{fmt(acctTotalPrincipal)}</td>
+                    <td className="acct-num">{fmt(acctTotalEval)}</td>
+                    <td className={`acct-num ${cls(acctTotalProfit)}`}>{acctTotalProfit >= 0 ? '+' : ''}{fmt(acctTotalProfit)}</td>
+                    <td className={`acct-num ${cls(acctTotalRate)}`}>{fmtRate(acctTotalRate)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
       </main>
 

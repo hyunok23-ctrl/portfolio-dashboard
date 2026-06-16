@@ -1785,3 +1785,101 @@ td.zero { color: var(--zero); }
   .ps-price { font-size: 0.82rem; }
   .ps-change { font-size: 0.68rem; }
 }
+
+/* ── 계좌별 현황 ─────────────────────────────────────── */
+.acct-section {
+  margin: 0 16px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.acct-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+}
+.acct-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text1);
+}
+.acct-section-hint {
+  font-size: 0.72rem;
+  color: var(--text3);
+}
+.acct-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.acct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 380px;
+}
+.acct-table thead tr {
+  background: var(--surface2);
+}
+.acct-table th {
+  padding: 8px 10px;
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.acct-table th:first-child { text-align: left; }
+.acct-table td {
+  padding: 10px 10px;
+  text-align: right;
+  color: var(--text1);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.acct-table tbody tr:last-child td { border-bottom: none; }
+.acct-name-cell { text-align: left !important; font-weight: 600; color: var(--text2) !important; }
+.acct-num { font-variant-numeric: tabular-nums; }
+.acct-principal-cell {
+  cursor: pointer;
+  text-align: right;
+}
+.acct-editable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.acct-edit-icon {
+  font-size: 0.65rem;
+  color: var(--text3);
+  opacity: 0.7;
+}
+.acct-input {
+  width: 110px;
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text1);
+  font-size: 0.82rem;
+  padding: 3px 6px;
+  text-align: right;
+  outline: none;
+}
+.acct-total-row td {
+  font-weight: 700;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  border-bottom: none !important;
+}
+.acct-total-row td:first-child { text-align: left; }
+.acct-table td.pos { color: var(--pos); }
+.acct-table td.neg { color: var(--neg); }
+
+@media (max-width: 768px) {
+  .acct-section { margin: 0 8px 20px; border-radius: 10px; }
+  .acct-table { font-size: 0.78rem; min-width: 340px; }
+  .acct-table th, .acct-table td { padding: 8px 8px; }
+  .acct-input { width: 90px; font-size: 0.78rem; }
+}
