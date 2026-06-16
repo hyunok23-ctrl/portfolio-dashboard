@@ -601,16 +601,20 @@ export default function App() {
   const captureScreen = useCallback(async () => {
     setCapturing(true);
 
-    // html2canvas + toBlob 전체를 Promise 체인으로 미리 생성 (await 하지 않음)
-    // Chrome은 clipboard.write() 호출 자체가 사용자 제스처 컨텍스트 내에 있어야 함
-    // await로 html2canvas를 먼저 기다리면 제스처 컨텍스트가 만료됨
-    // LLM 판독 가능한 최소 너비 1440px 보장
-    // 모바일(390px 뷰포트)에서 devicePixelRatio만 쓰면 해상도 부족
     const scrollW = document.documentElement.scrollWidth;
-    const minScale = Math.ceil(1440 / scrollW);
-    const scale = Math.max(window.devicePixelRatio || 1, minScale);
+    const scrollH = document.documentElement.scrollHeight;
+    const dpr     = window.devicePixelRatio || 1;
+    const isMobile = window.innerWidth < 768;
 
-    const blobPromise = html2canvas(document.body, {
+    // 모바일: 목표 2400px 너비, 총 픽셀 20M 이내 (canvas 메모리 한계)
+    // 데스크탑: 목표 1920px 너비, 총 픽셀 50M 이내
+    const targetW   = isMobile ? 2400 : 1920;
+    const maxPixels = isMobile ? 20_000_000 : 50_000_000;
+    const rawScale  = Math.max(dpr, Math.ceil(targetW / scrollW));
+    const maxScale  = Math.floor(Math.sqrt(maxPixels / (scrollW * scrollH)));
+    const scale     = Math.max(1, Math.min(rawScale, maxScale));
+
+    const h2cOpts = {
       backgroundColor: '#0d1117',
       scale,
       useCORS: true,
@@ -618,15 +622,49 @@ export default function App() {
       scrollX: 0,
       scrollY: 0,
       windowWidth: scrollW,
-      windowHeight: document.documentElement.scrollHeight,
-    }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
+      windowHeight: scrollH,
+    };
 
-    if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+    const filename = `portfolio-${new Date().toISOString().slice(0, 10)}.png`;
+
+    // ── 모바일: await 후 다운로드 (클립보드는 보조 시도) ──────────
+    if (isMobile) {
       try {
-        // clipboard.write를 await 없이 즉시 호출 → 제스처 컨텍스트 유지
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blobPromise }),
-        ]);
+        const canvas = await html2canvas(document.body, h2cOpts);
+        const blob   = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+        if (!blob) throw new Error('blob null');
+
+        // 클립보드 지원 시 1차 시도
+        if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            showToast('ok');
+            setCapturing(false);
+            return;
+          } catch {}
+        }
+
+        // 다운로드 (갤러리 저장)
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+        showToast('download');
+      } catch (e) {
+        console.error('모바일 캡처 실패:', e);
+        showToast('error');
+      }
+      setCapturing(false);
+      return;
+    }
+
+    // ── 데스크탑: blobPromise 방식으로 Chrome 제스처 컨텍스트 유지 ──
+    const blobPromise = html2canvas(document.body, h2cOpts)
+      .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
+
+    if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
         setCapturing(false);
         showToast('ok');
         return;
@@ -635,14 +673,12 @@ export default function App() {
       }
     }
 
-    // fallback: 파일 다운로드
+    // 데스크탑 fallback: 다운로드
     try {
       const blob = await blobPromise;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `portfolio-${new Date().toISOString().slice(0,10)}.png`;
-      a.click();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
       showToast('download');
     } catch (e) {
