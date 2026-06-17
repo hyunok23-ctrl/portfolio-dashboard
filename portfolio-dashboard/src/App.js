@@ -591,6 +591,7 @@ export default function App() {
   });
   const [editingAcct, setEditingAcct] = useState(null);
   const [editingAcctVal, setEditingAcctVal] = useState('');
+  const [acctPrincipalsLoaded, setAcctPrincipalsLoaded] = useState(false);
   const intervalRef = useRef(null);
 
   const showToast = (type) => {
@@ -686,6 +687,20 @@ export default function App() {
       showToast('error');
     }
     setCapturing(false);
+  }, []);
+
+  // 계좌별 납입원금 Redis 로드 (앱 시작 시 1회)
+  useEffect(() => {
+    fetch('/api/acct-principals')
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === 'object' && !data.error && Object.keys(data).length > 0) {
+          setAcctPrincipals(data);
+          localStorage.setItem('portfolio_acct_principals', JSON.stringify(data));
+        }
+        setAcctPrincipalsLoaded(true);
+      })
+      .catch(() => setAcctPrincipalsLoaded(true));
   }, []);
 
   // 서버에서 데이터 불러오기 (Redis 빈 배열 포함 실패 시 localStorage fallback)
@@ -848,6 +863,12 @@ export default function App() {
     const next = { ...acctPrincipals, [acct]: val };
     setAcctPrincipals(next);
     localStorage.setItem('portfolio_acct_principals', JSON.stringify(next));
+    // Redis 동기화 (모바일/PC 간 공유)
+    fetch('/api/acct-principals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next),
+    }).catch(() => {});
   };
 
   // 비중 차트는 종목코드 기준으로 합산 (같은 종목이 여러 계좌에 있어도 하나로)
