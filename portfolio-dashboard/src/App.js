@@ -602,37 +602,38 @@ export default function App() {
   const captureScreen = useCallback(async () => {
     setCapturing(true);
 
-    const scrollW = document.documentElement.scrollWidth;
-    const scrollH = document.documentElement.scrollHeight;
-    const dpr     = window.devicePixelRatio || 1;
+    const scrollW  = document.documentElement.scrollWidth;
+    const scrollH  = document.documentElement.scrollHeight;
+    const dpr      = window.devicePixelRatio || 1;
     const isMobile = window.innerWidth < 768;
-
-    // 모바일: 목표 2400px 너비, 총 픽셀 20M 이내 (canvas 메모리 한계)
-    // 데스크탑: 목표 1920px 너비, 총 픽셀 50M 이내
-    const targetW   = isMobile ? 2400 : 1920;
-    const maxPixels = isMobile ? 20_000_000 : 50_000_000;
-    const rawScale  = Math.max(dpr, Math.ceil(targetW / scrollW));
-    const maxScale  = Math.floor(Math.sqrt(maxPixels / (scrollW * scrollH)));
-    const scale     = Math.max(1, Math.min(rawScale, maxScale));
-
-    const h2cOpts = {
-      backgroundColor: '#0d1117',
-      scale,
-      useCORS: true,
-      allowTaint: true,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: scrollW,
-      windowHeight: scrollH,
-    };
 
     const filename = `portfolio-${new Date().toISOString().slice(0, 10)}.png`;
 
-    // ── 모바일: await 후 다운로드 (클립보드는 보조 시도) ──────────
+    // ── 모바일: 현재 보이는 화면(뷰포트)만 고해상도 캡처 ─────────
+    // 전체 페이지 캡처 시 scrollHeight가 너무 길어 scale=1로 떨어지며
+    // 390px 너비 그대로 저장되어 판독 불가. 뷰포트 단위로 캡처 권장.
     if (isMobile) {
+      const vpW   = window.innerWidth;
+      const vpH   = window.innerHeight;
+      // 목표 최소 너비 1600px, devicePixelRatio 반영
+      const scale = Math.max(dpr * 2, Math.ceil(1600 / vpW));
+
       try {
-        const canvas = await html2canvas(document.body, h2cOpts);
-        const blob   = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+        const canvas = await html2canvas(document.body, {
+          backgroundColor: '#0d1117',
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          scrollX: 0,
+          scrollY: -window.scrollY,
+          x: 0,
+          y: window.scrollY,
+          width: vpW,
+          height: vpH,
+          windowWidth: vpW,
+          windowHeight: vpH,
+        });
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
         if (!blob) throw new Error('blob null');
 
         // 클립보드 지원 시 1차 시도
