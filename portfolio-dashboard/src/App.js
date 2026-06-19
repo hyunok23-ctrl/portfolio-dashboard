@@ -661,8 +661,17 @@ export default function App() {
     }
 
     // ── 데스크탑: blobPromise 방식으로 Chrome 제스처 컨텍스트 유지 ──
-    const blobPromise = html2canvas(document.body, h2cOpts)
-      .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
+    const desktopScale = Math.max(window.devicePixelRatio || 1, Math.ceil(1920 / scrollW));
+    const blobPromise = html2canvas(document.body, {
+      backgroundColor: '#0d1117',
+      scale: desktopScale,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: scrollW,
+      windowHeight: scrollH,
+    }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
 
     if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
       try {
