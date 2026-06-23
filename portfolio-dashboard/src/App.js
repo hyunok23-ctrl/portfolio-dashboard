@@ -609,21 +609,29 @@ export default function App() {
 
     const filename = `portfolio-${new Date().toISOString().slice(0, 10)}.png`;
 
-    // ── 모바일: 현재 보이는 화면(뷰포트)만 고해상도 캡처 ─────────
-    // 전체 페이지 캡처 시 scrollHeight가 너무 길어 scale=1로 떨어지며
-    // 390px 너비 그대로 저장되어 판독 불가. 뷰포트 단위로 캡처 권장.
+    // ── 공통 html2canvas 옵션 빌더 ───────────────────────────────
+    const buildOpts = (extra) => ({
+      backgroundColor: '#0d1117',
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 30000,
+      logging: false,
+      ...extra,
+    });
+
+    // ── 모바일: 뷰포트만 고해상도 캡처 ──────────────────────────
     if (isMobile) {
       const vpW   = window.innerWidth;
       const vpH   = window.innerHeight;
-      // 목표 최소 너비 1600px, devicePixelRatio 반영
-      const scale = Math.max(dpr * 2, Math.ceil(1600 / vpW));
+      // 목표 2400px 너비, dpr*2 이상 보장 → 최소 6x on Android(dpr=3)
+      const scale = Math.max(dpr * 2, Math.ceil(2400 / vpW));
 
       try {
-        const canvas = await html2canvas(document.body, {
-          backgroundColor: '#0d1117',
+        // 웹폰트 완전 로드 대기 → 글자 선명도 보장
+        await document.fonts.ready;
+
+        const canvas = await html2canvas(document.body, buildOpts({
           scale,
-          useCORS: true,
-          allowTaint: true,
           scrollX: 0,
           scrollY: -window.scrollY,
           x: 0,
@@ -632,11 +640,10 @@ export default function App() {
           height: vpH,
           windowWidth: vpW,
           windowHeight: vpH,
-        });
+        }));
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
         if (!blob) throw new Error('blob null');
 
-        // 클립보드 지원 시 1차 시도
         if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
           try {
             await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -646,7 +653,6 @@ export default function App() {
           } catch {}
         }
 
-        // 다운로드 (갤러리 저장)
         const url = URL.createObjectURL(blob);
         const a   = document.createElement('a');
         a.href = url; a.download = filename; a.click();
@@ -660,18 +666,19 @@ export default function App() {
       return;
     }
 
-    // ── 데스크탑: blobPromise 방식으로 Chrome 제스처 컨텍스트 유지 ──
-    const desktopScale = Math.max(window.devicePixelRatio || 1, Math.ceil(1920 / scrollW));
-    const blobPromise = html2canvas(document.body, {
-      backgroundColor: '#0d1117',
-      scale: desktopScale,
-      useCORS: true,
-      allowTaint: true,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: scrollW,
-      windowHeight: scrollH,
-    }).then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
+    // ── 데스크탑: Chrome 제스처 컨텍스트 유지 (blobPromise) ──────
+    // dpr*2 → HiDPI 1440p 모니터: scale=4(5760px), FHD: scale=2(3840px)
+    const desktopScale = Math.max(dpr * 2, 2);
+    // fonts.ready를 Promise 체인 안에서 처리 → await 없이 gesture context 유지
+    const blobPromise = document.fonts.ready
+      .then(() => html2canvas(document.body, buildOpts({
+        scale: desktopScale,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: scrollW,
+        windowHeight: scrollH,
+      })))
+      .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
 
     if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
       try {
