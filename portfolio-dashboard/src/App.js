@@ -602,107 +602,116 @@ export default function App() {
   const captureScreen = useCallback(async () => {
     setCapturing(true);
 
-    const scrollW  = document.documentElement.scrollWidth;
-    const scrollH  = document.documentElement.scrollHeight;
     const dpr      = window.devicePixelRatio || 1;
     const isMobile = window.innerWidth < 768;
+    const filename  = `portfolio-${new Date().toISOString().slice(0, 10)}.png`;
 
-    const filename = `portfolio-${new Date().toISOString().slice(0, 10)}.png`;
+    // blob → 클립보드 또는 다운로드
+    const saveBlob = async (blob) => {
+      if (!isMobile && navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          showToast('ok');
+          return;
+        } catch {}
+      }
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      showToast('download');
+    };
 
-    // ── 공통 html2canvas 옵션 빌더 ───────────────────────────────
-    const buildOpts = (extra) => ({
+    // ── 1순위: Screen Capture API (브라우저 원본 해상도) ──────────
+    // getDisplayMedia → 실제 렌더링된 화면을 그대로 캡처, html2canvas 품질 한계 없음
+    if (navigator.mediaDevices?.getDisplayMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: 'browser' },
+          preferCurrentTab: true,   // Chrome 107+: 탭 선택 없이 현재 탭 바로 캡처
+          selfBrowserSurface: 'include',
+          audio: false,
+        });
+
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.muted = true;
+        await new Promise(r => { video.onloadedmetadata = r; });
+        await video.play();
+        // 2프레임 대기 → 실제 콘텐츠가 렌더링될 시간 확보
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        stream.getTracks().forEach(t => t.stop());
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 1.0));
+        await saveBlob(blob);
+        setCapturing(false);
+        return;
+      } catch (e) {
+        // NotAllowedError: 사용자 거부 → 폴백
+        // NotSupportedError: 미지원 → 폴백
+        if (e.name !== 'NotAllowedError') console.warn('getDisplayMedia:', e.name);
+      }
+    }
+
+    // ── 2순위 폴백: html2canvas (getDisplayMedia 미지원/거부 시) ──
+    const scrollW = document.documentElement.scrollWidth;
+    const scrollH = document.documentElement.scrollHeight;
+    const h2cBase = {
       backgroundColor: '#0d1117',
       useCORS: true,
       allowTaint: true,
       imageTimeout: 30000,
       logging: false,
-      ...extra,
-    });
+    };
 
-    // ── 모바일: 뷰포트만 고해상도 캡처 ──────────────────────────
     if (isMobile) {
       const vpW   = window.innerWidth;
       const vpH   = window.innerHeight;
-      // 목표 2400px 너비, dpr*2 이상 보장 → 최소 6x on Android(dpr=3)
       const scale = Math.max(dpr * 2, Math.ceil(2400 / vpW));
-
       try {
-        // 웹폰트 완전 로드 대기 → 글자 선명도 보장
         await document.fonts.ready;
-
-        const canvas = await html2canvas(document.body, buildOpts({
-          scale,
-          scrollX: 0,
-          scrollY: -window.scrollY,
-          x: 0,
-          y: window.scrollY,
-          width: vpW,
-          height: vpH,
-          windowWidth: vpW,
-          windowHeight: vpH,
-        }));
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-        if (!blob) throw new Error('blob null');
-
-        if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
-          try {
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            showToast('ok');
-            setCapturing(false);
-            return;
-          } catch {}
-        }
-
-        const url = URL.createObjectURL(blob);
-        const a   = document.createElement('a');
-        a.href = url; a.download = filename; a.click();
-        URL.revokeObjectURL(url);
-        showToast('download');
-      } catch (e) {
-        console.error('모바일 캡처 실패:', e);
-        showToast('error');
-      }
+        const canvas = await html2canvas(document.body, {
+          ...h2cBase, scale,
+          scrollX: 0, scrollY: -window.scrollY,
+          x: 0, y: window.scrollY,
+          width: vpW, height: vpH,
+          windowWidth: vpW, windowHeight: vpH,
+        });
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 1.0));
+        await saveBlob(blob);
+      } catch { showToast('error'); }
       setCapturing(false);
       return;
     }
 
-    // ── 데스크탑: Chrome 제스처 컨텍스트 유지 (blobPromise) ──────
-    // dpr*2 → HiDPI 1440p 모니터: scale=4(5760px), FHD: scale=2(3840px)
-    const desktopScale = Math.max(dpr * 2, 2);
-    // fonts.ready를 Promise 체인 안에서 처리 → await 없이 gesture context 유지
+    // 데스크탑 폴백: blobPromise로 Chrome 제스처 컨텍스트 유지
+    const scale       = Math.max(dpr * 2, 2);
     const blobPromise = document.fonts.ready
-      .then(() => html2canvas(document.body, buildOpts({
-        scale: desktopScale,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: scrollW,
-        windowHeight: scrollH,
-      })))
-      .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0)));
+      .then(() => html2canvas(document.body, {
+        ...h2cBase, scale,
+        scrollX: 0, scrollY: 0,
+        windowWidth: scrollW, windowHeight: scrollH,
+      }))
+      .then(c => new Promise(r => c.toBlob(r, 'image/png', 1.0)));
 
     if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
       try {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
-        setCapturing(false);
-        showToast('ok');
-        return;
-      } catch (e) {
-        console.warn('클립보드 복사 실패:', e);
-      }
+        setCapturing(false); showToast('ok'); return;
+      } catch {}
     }
-
-    // 데스크탑 fallback: 다운로드
     try {
       const blob = await blobPromise;
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-      showToast('download');
-    } catch (e) {
-      console.error('캡처 실패:', e);
-      showToast('error');
-    }
+      URL.revokeObjectURL(url); showToast('download');
+    } catch { showToast('error'); }
     setCapturing(false);
   }, []);
 
