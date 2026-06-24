@@ -689,13 +689,17 @@ export default function App() {
       return;
     }
 
-    // 데스크탑 폴백: blobPromise로 Chrome 제스처 컨텍스트 유지
-    const scale       = Math.max(dpr * 2, 2);
+    // 데스크탑 폴백: 뷰포트 고배율 캡처 + Chrome 제스처 컨텍스트 유지
+    const vpW  = window.innerWidth;
+    const vpH  = window.innerHeight;
+    const scale = Math.max(dpr * 3, 3);
     const blobPromise = document.fonts.ready
       .then(() => html2canvas(document.body, {
         ...h2cBase, scale,
-        scrollX: 0, scrollY: 0,
-        windowWidth: scrollW, windowHeight: scrollH,
+        scrollX: 0, scrollY: -window.scrollY,
+        x: 0, y: window.scrollY,
+        width: vpW, height: vpH,
+        windowWidth: vpW, windowHeight: vpH,
       }))
       .then(c => new Promise(r => c.toBlob(r, 'image/png', 1.0)));
 
