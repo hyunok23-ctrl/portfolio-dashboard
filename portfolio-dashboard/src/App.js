@@ -622,9 +622,9 @@ export default function App() {
       showToast('download');
     };
 
-    // ── 1순위: Screen Capture API (브라우저 원본 해상도) ──────────
+    // ── 1순위: Screen Capture API (데스크탑만, 모바일은 폴백 직행) ──
     // getDisplayMedia → 실제 렌더링된 화면을 그대로 캡처, html2canvas 품질 한계 없음
-    if (navigator.mediaDevices?.getDisplayMedia) {
+    if (!isMobile && navigator.mediaDevices?.getDisplayMedia) {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { displaySurface: 'browser' },
