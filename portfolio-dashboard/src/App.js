@@ -675,7 +675,7 @@ export default function App() {
       const scale = Math.max(dpr * 2, Math.ceil(2400 / vpW));
       try {
         await document.fonts.ready;
-        const canvas = await html2canvas(document.body, {
+        const canvas = await html2canvas(document.documentElement, {
           ...h2cBase, scale,
           scrollX: 0, scrollY: -window.scrollY,
           x: 0, y: window.scrollY,
@@ -694,7 +694,7 @@ export default function App() {
     const vpH  = window.innerHeight;
     const scale = Math.max(dpr * 3, 3);
     const blobPromise = document.fonts.ready
-      .then(() => html2canvas(document.body, {
+      .then(() => html2canvas(document.documentElement, {
         ...h2cBase, scale,
         scrollX: 0, scrollY: -window.scrollY,
         x: 0, y: window.scrollY,
